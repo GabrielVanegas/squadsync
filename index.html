@@ -18,318 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
-<!-- QR code — self-contained, no CDN dependency. Generates SVG. -->
-<script>
-(function(){
-"use strict";
-// QR Code Generator - produces SVG output for reliable rendering
-var QRMode={BYTE:4};
-var QRErrorCorrectionLevel={L:1,M:0,Q:3,H:2};
 
-// Galois field math
-var EXP=new Array(256),LOG=new Array(256);
-(function(){for(var i=0,v=1;i<255;i++){EXP[i]=v;LOG[v]=i;v<<=1;if(v&256)v^=0x11d;}EXP[255]=EXP[0];})();
-function gfMul(a,b){return a&&b?EXP[(LOG[a]+LOG[b])%255]:0;}
-
-// Polynomial operations
-function polyMul(a,b){
-  var r=new Uint8Array(a.length+b.length-1);
-  for(var i=0;i<a.length;i++)for(var j=0;j<b.length;j++)r[i+j]^=gfMul(a[i],b[j]);
-  return r;
-}
-function polyRest(data,gen){
-  var r=new Uint8Array(gen.length-1);
-  for(var i=0;i<data.length;i++){
-    var f=data[i]^r[0];
-    r.copyWithin(0,1);r[r.length-1]=0;
-    for(var j=0;j<gen.length-1;j++)r[j]^=gfMul(gen[j+1],f);
-  }
-  return r;
-}
-function getGenerator(n){
-  var g=new Uint8Array([1]);
-  for(var i=0;i<n;i++)g=polyMul(g,new Uint8Array([1,EXP[i]]));
-  return g;
-}
-
-// QR version/EC tables
-var EC_TABLE=[
-  // [totalWords, ecWordsPerBlock, numBlocks] for versions 1-10, EC level M
-  // Version 1-10 Level M
-  [26,10,1],[44,16,1],[70,26,1],[100,18,2],[134,24,2],
-  [86,16,4],[98,18,4],[121,22,2],[146,22,3],[174,28,2]
-];
-// For other levels:
-var EC_TABLE_L=[[26,7,1],[44,10,1],[70,15,1],[100,20,1],[134,26,1],[86,18,2],[98,20,2],[121,24,2],[146,30,2],[174,18,4]];
-var EC_TABLE_Q=[[26,13,1],[44,22,1],[70,18,2],[100,26,2],[134,18,4],[86,24,4],[98,18,6],[121,22,6],[146,20,8],[174,24,8]];
-var EC_TABLE_H=[[26,17,1],[44,28,1],[70,22,2],[100,16,4],[134,22,4],[86,28,4],[98,26,5],[121,26,6],[146,28,7],[174,24,8]];
-
-function getECInfo(version,ecl){
-  var table;
-  if(ecl===1)table=EC_TABLE_L;
-  else if(ecl===0)table=EC_TABLE;
-  else if(ecl===3)table=EC_TABLE_Q;
-  else table=EC_TABLE_H;
-  return table[version-1];
-}
-
-function encodeData(text,version,ecl){
-  var info=getECInfo(version,ecl);
-  var totalWords=info[0],ecPerBlock=info[1],numBlocks=info[2];
-  var dataWords=totalWords-ecPerBlock*numBlocks;
-
-  // Encode as byte mode
-  var encoded=[];
-  var bytes=[];
-  for(var i=0;i<text.length;i++){
-    var cp=text.charCodeAt(i);
-    if(cp<0x80)bytes.push(cp);
-    else if(cp<0x800){bytes.push(0xc0|(cp>>6));bytes.push(0x80|(cp&0x3f));}
-    else{bytes.push(0xe0|(cp>>12));bytes.push(0x80|((cp>>6)&0x3f));bytes.push(0x80|(cp&0x3f));}
-  }
-
-  // Mode indicator (4) + char count (8 for v1-9, 16 for v10+)
-  var bits=[];
-  function pushBits(val,len){for(var i=len-1;i>=0;i--)bits.push((val>>i)&1);}
-  pushBits(4,4); // byte mode
-  pushBits(bytes.length, version<10?8:16);
-  for(var i=0;i<bytes.length;i++)pushBits(bytes[i],8);
-
-  // Terminator
-  var totalBits=dataWords*8;
-  var termLen=Math.min(4,totalBits-bits.length);
-  for(var i=0;i<termLen;i++)bits.push(0);
-  // Pad to byte boundary
-  while(bits.length%8)bits.push(0);
-  // Pad bytes
-  var padBytes=[0xEC,0x11],pi=0;
-  while(bits.length<totalBits){
-    pushBits(padBytes[pi],8);pi=(pi+1)%2;
-  }
-
-  // Convert to bytes
-  var dataArr=[];
-  for(var i=0;i<bits.length;i+=8)
-    dataArr.push((bits[i]<<7)|(bits[i+1]<<6)|(bits[i+2]<<5)|(bits[i+3]<<4)|(bits[i+4]<<3)|(bits[i+5]<<2)|(bits[i+6]<<1)|bits[i+7]);
-
-  // Split into blocks and generate EC
-  var gen=getGenerator(ecPerBlock);
-  var blockSize=Math.floor(dataWords/numBlocks);
-  var longBlocks=dataWords%numBlocks;
-  var dataBlocks=[],ecBlocks=[];
-  var offset=0;
-  for(var b=0;b<numBlocks;b++){
-    var sz=blockSize+(b>=numBlocks-longBlocks?1:0);
-    dataBlocks.push(dataArr.slice(offset,offset+sz));
-    ecBlocks.push(polyRest(new Uint8Array(dataArr.slice(offset,offset+sz)),gen));
-    offset+=sz;
-  }
-
-  // Interleave
-  var result=[];
-  var maxDataLen=blockSize+(longBlocks?1:0);
-  for(var i=0;i<maxDataLen;i++)for(var b=0;b<numBlocks;b++)if(i<dataBlocks[b].length)result.push(dataBlocks[b][i]);
-  for(var i=0;i<ecPerBlock;i++)for(var b=0;b<numBlocks;b++)result.push(ecBlocks[b][i]);
-  return result;
-}
-
-function getVersion(text,ecl){
-  for(var v=1;v<=10;v++){
-    var info=getECInfo(v,ecl);
-    var dataWords=info[0]-info[1]*info[2];
-    var bytes=0;
-    for(var i=0;i<text.length;i++){var c=text.charCodeAt(i);bytes+=c<0x80?1:c<0x800?2:3;}
-    var headerBits=4+(v<10?8:16);
-    var available=dataWords*8-headerBits;
-    if(bytes*8<=available)return v;
-  }
-  return 10;
-}
-
-// Module placement
-var ALIGN_POS=[[],[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50]];
-
-function createMatrix(version){
-  var size=version*4+17;
-  var m=[];for(var i=0;i<size;i++){m[i]=[];for(var j=0;j<size;j++)m[i][j]=null;}
-  return m;
-}
-
-function placeFinderPattern(m,r,c){
-  for(var dr=-1;dr<=7;dr++)for(var dc=-1;dc<=7;dc++){
-    var rr=r+dr,cc=c+dc;
-    if(rr<0||rr>=m.length||cc<0||cc>=m.length)continue;
-    m[rr][cc]=(dr>=0&&dr<=6&&(dc===0||dc===6))||(dc>=0&&dc<=6&&(dr===0||dr===6))||(dr>=2&&dr<=4&&dc>=2&&dc<=4)?1:0;
-  }
-}
-
-function placeAlignmentPattern(m,r,c){
-  for(var dr=-2;dr<=2;dr++)for(var dc=-2;dc<=2;dc++)
-    m[r+dr][c+dc]=(Math.abs(dr)===2||Math.abs(dc)===2||(dr===0&&dc===0))?1:0;
-}
-
-function placePatterns(m,version){
-  var size=m.length;
-  placeFinderPattern(m,0,0);
-  placeFinderPattern(m,size-7,0);
-  placeFinderPattern(m,0,size-7);
-  // Timing
-  for(var i=8;i<size-8;i++){if(m[6][i]===null)m[6][i]=i%2===0?1:0;if(m[i][6]===null)m[i][6]=i%2===0?1:0;}
-  // Alignment
-  var ap=ALIGN_POS[version];
-  if(ap)for(var i=0;i<ap.length;i++)for(var j=0;j<ap.length;j++){
-    if((i===0&&j===0)||(i===0&&j===ap.length-1)||(i===ap.length-1&&j===0))continue;
-    placeAlignmentPattern(m,ap[i],ap[j]);
-  }
-  // Dark module
-  m[size-8][8]=1;
-}
-
-function reserveFormatArea(m){
-  var size=m.length;
-  for(var i=0;i<8;i++){
-    if(m[8][i]===null)m[8][i]=-1;
-    if(m[i][8]===null)m[i][8]=-1;
-    if(m[8][size-1-i]===null)m[8][size-1-i]=-1;
-    if(m[size-1-i][8]===null)m[size-1-i][8]=-1;
-  }
-  if(m[8][8]===null)m[8][8]=-1;
-}
-
-function placeData(m,data){
-  var size=m.length;
-  var bits=[];
-  for(var i=0;i<data.length;i++)for(var b=7;b>=0;b--)bits.push((data[i]>>b)&1);
-  var idx=0;
-  for(var right=size-1;right>=1;right-=2){
-    if(right===6)right=5;
-    for(var vert=0;vert<size;vert++){
-      var upward=((Math.floor((size-1-right)/2))%2===0);
-      var y=upward?size-1-vert:vert;
-      for(var dx=0;dx<=1;dx++){
-        var x=right-dx;
-        if(m[y][x]===null){
-          m[y][x]=idx<bits.length?bits[idx++]:0;
-        }
-      }
-    }
-  }
-}
-
-function getMaskFn(p){
-  switch(p){
-    case 0:return function(r,c){return(r+c)%2===0;};
-    case 1:return function(r){return r%2===0;};
-    case 2:return function(r,c){return c%3===0;};
-    case 3:return function(r,c){return(r+c)%3===0;};
-    case 4:return function(r,c){return(Math.floor(r/2)+Math.floor(c/3))%2===0;};
-    case 5:return function(r,c){return(r*c)%2+(r*c)%3===0;};
-    case 6:return function(r,c){return((r*c)%2+(r*c)%3)%2===0;};
-    case 7:return function(r,c){return((r*c)%3+(r+c)%2)%2===0;};
-  }
-}
-
-function applyMask(m,maskPat){
-  var fn=getMaskFn(maskPat);
-  var size=m.length;
-  for(var r=0;r<size;r++)for(var c=0;c<size;c++){
-    if(m[r][c]===-1||m[r][c]===null)continue;
-    // Only mask data/EC modules (not patterns)
-    // We use a trick: patterns are placed first, then format reserved as -1, then data as 0/1
-    // After data placement, all null cells should be gone
-    if(fn(r,c))m[r][c]^=1;
-  }
-}
-
-function formatBits(ecl,mask){
-  var FORMAT_DIVISOR=0x537;
-  var FORMAT_MASK=0x5412;
-  var ecBits;
-  if(ecl===1)ecBits=1;else if(ecl===0)ecBits=0;else if(ecl===3)ecBits=3;else ecBits=2;
-  var data=(ecBits<<3)|mask;
-  var bits=data<<10;
-  for(var i=14;i>=10;i--)if(bits&(1<<i))bits^=FORMAT_DIVISOR<<(i-10);
-  return((data<<10)|bits)^FORMAT_MASK;
-}
-
-function placeFormatBits(m,ecl,mask){
-  var size=m.length;
-  var fbits=formatBits(ecl,mask);
-  for(var i=0;i<15;i++){
-    var bit=(fbits>>i)&1;
-    // Around top-left finder
-    if(i<6)m[i][8]=bit;
-    else if(i<8)m[i+1][8]=bit;
-    else m[size-15+i][8]=bit;
-    // Along top and right
-    if(i<8)m[8][size-1-i]=bit;
-    else if(i<9)m[8][15-1-i+1]=bit;
-    else m[8][15-1-i]=bit;
-  }
-}
-
-function scoreMask(m){
-  var size=m.length,score=0;
-  // Rule 1: consecutive same-color in row/col
-  for(var r=0;r<size;r++){var cnt=1;for(var c=1;c<size;c++){if(m[r][c]===m[r][c-1])cnt++;else cnt=1;if(cnt===5)score+=3;else if(cnt>5)score++;}}
-  for(var c=0;c<size;c++){var cnt=1;for(var r=1;r<size;r++){if(m[r][c]===m[r-1][c])cnt++;else cnt=1;if(cnt===5)score+=3;else if(cnt>5)score++;}}
-  // Rule 2: 2x2 blocks
-  for(var r=0;r<size-1;r++)for(var c=0;c<size-1;c++){var v=m[r][c];if(v===m[r][c+1]&&v===m[r+1][c]&&v===m[r+1][c+1])score+=3;}
-  return score;
-}
-
-function generateQRMatrix(text,ecl){
-  if(ecl===undefined)ecl=0; // M level
-  var version=getVersion(text,ecl);
-  var data=encodeData(text,version,ecl);
-
-  var bestMatrix=null,bestScore=Infinity;
-  for(var mask=0;mask<8;mask++){
-    var m=createMatrix(version);
-    placePatterns(m,version);
-    reserveFormatArea(m);
-    placeData(m,data);
-    applyMask(m,mask);
-    placeFormatBits(m,ecl,mask);
-    var s=scoreMask(m);
-    if(s<bestScore){bestScore=s;bestMatrix=m;}
-  }
-  return bestMatrix;
-}
-
-// SVG renderer
-function matrixToSVG(matrix,size,darkColor,lightColor){
-  var mc=matrix.length;
-  var margin=4; // quiet zone
-  var total=mc+margin*2;
-  var cell=size/total;
-  var parts=['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+total+' '+total+'" width="'+size+'" height="'+size+'">'];
-  parts.push('<rect width="'+total+'" height="'+total+'" fill="'+(lightColor||'#ffffff')+'"/>');
-  var dark=darkColor||'#000000';
-  for(var r=0;r<mc;r++)for(var c=0;c<mc;c++){
-    if(matrix[r][c])parts.push('<rect x="'+(c+margin)+'" y="'+(r+margin)+'" width="1" height="1" fill="'+dark+'"/>');
-  }
-  parts.push('</svg>');
-  return parts.join('');
-}
-
-window.QRCode=function(el,opts){
-  if(typeof opts==='string')opts={text:opts};
-  var text=opts.text||'';
-  var size=opts.width||200;
-  var ecl=(opts.correctLevel!==undefined)?opts.correctLevel:0;
-  try{
-    var matrix=generateQRMatrix(text,ecl);
-    el.innerHTML=matrixToSVG(matrix,size,opts.colorDark,opts.colorLight);
-  }catch(e){
-    console.error('QR generation error:',e);
-    el.innerHTML='<div style="width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;background:#fff;color:#666;font-size:11px">QR Error</div>';
-  }
-};
-window.QRCode.CorrectLevel={L:1,M:0,Q:3,H:2};
-})();
-})();
-</script>
 
 <!-- ═══════════════════════════════════════════════════════════
      FIREBASE CONFIG — paste your values here
@@ -944,12 +633,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ── QR CODE ───────────────────────────────────────── */
-.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;margin:16px 0;}
-.qr-box{background:#fff;padding:14px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px var(--border);min-width:208px;min-height:208px;}
-.qr-label{font-family:var(--font-hud);font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;}
-.qr-tabs{display:flex;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:3px;margin-bottom:14px;}
-.qr-tab{font-family:var(--font-hud);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;cursor:pointer;border:none;background:none;color:var(--text3);border-radius:var(--r-sm);transition:all 0.15s;flex:1;}
-.qr-tab.active{background:var(--panel2);color:var(--accent);}
+/* QR code styles removed */
 
 /* ── SIDEBAR LAYOUT ────────────────────────────────── */
 .main-with-sidebar{display:grid;grid-template-columns:minmax(0,780px) 280px;gap:20px;align-items:start;}
@@ -1151,12 +835,13 @@ p.hint{font-size:11px;color:var(--text2);}
 }
 .btn-gcal:hover{color:#4285f4;border-color:#4285f4;background:rgba(66,133,244,0.15);box-shadow:0 0 10px rgba(66,133,244,0.15);}
 .btn-gcal-lg{
-  font-family:var(--font-hud);font-size:11px;letter-spacing:0.5px;color:var(--text);
-  background:rgba(66,133,244,0.08);border:1px solid rgba(66,133,244,0.35);
-  padding:8px 16px;cursor:pointer;transition:all 0.15s;text-decoration:none;
-  display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-sm);
+  font-family:var(--font-hud);font-size:13px;letter-spacing:0.5px;color:#4285f4;
+  background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.45);
+  padding:12px 20px;cursor:pointer;transition:all 0.15s;text-decoration:none;
+  display:inline-flex;align-items:center;gap:8px;border-radius:var(--r-sm);
+  font-weight:600;width:100%;justify-content:center;margin-top:8px;
 }
-.btn-gcal-lg:hover{color:#4285f4;border-color:#4285f4;background:rgba(66,133,244,0.15);box-shadow:0 0 12px rgba(66,133,244,0.2);}
+.btn-gcal-lg:hover{color:#fff;border-color:#4285f4;background:rgba(66,133,244,0.25);box-shadow:0 0 16px rgba(66,133,244,0.25);}
 
 /* Grid locked-in cell state */
 .gc.locked-in{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.5);outline:2px solid var(--accent3);outline-offset:-2px;z-index:3;}
@@ -1586,15 +1271,30 @@ p.hint{font-size:11px;color:var(--text2);}
           <div class="mode-banner-icon">👁</div>
           <div>
             <div class="mode-banner-title">Viewing Squad Overlap — Read Only</div>
-            <div class="mode-banner-sub">All times in <strong id="overlap-tz-label" style="color:inherit">your timezone</strong> · Green = overlapping · Click green cells to vote</div>
+            <div class="mode-banner-sub">All times in <strong id="overlap-tz-label" style="color:inherit">your timezone</strong> · Colored cells = squad overlap · Click to vote</div>
+          </div>
+        </div>
+        <!-- Voting explanation banner — moved to top -->
+        <div class="vote-explainer" id="vote-explainer">
+          <div class="vote-explainer-icon">🗳</div>
+          <div class="vote-explainer-content">
+            <div class="vote-explainer-title">How Voting Works</div>
+            <div class="vote-explainer-text">
+              Colored cells show when your squad overlaps. <strong>Vote</strong> for times that work for you. When <strong>90%+ of the squad</strong> votes for the same slot, it automatically <strong>locks in</strong> 🔒 — meaning it's officially game time.
+            </div>
+            <div class="vote-explainer-steps">
+              <span class="vote-explainer-step">① Find a colored overlap block below</span>
+              <span class="vote-explainer-step">② Click <strong>Vote</strong> to say "I'm in"</span>
+              <span class="vote-explainer-step">③ 90%+ votes = auto-locked session</span>
+            </div>
           </div>
         </div>
         <div class="legend">
-          <div class="leg-item"><div class="leg-swatch" style="background:var(--bg3);border-color:var(--border)"></div>0%</div>
-          <div class="leg-item"><div class="leg-swatch" style="background:rgba(234,179,8,0.22);border-color:rgba(234,179,8,0.5)"></div>1–24%</div>
-          <div class="leg-item"><div class="leg-swatch" style="background:rgba(249,115,22,0.35);border-color:rgba(249,115,22,0.6)"></div>25–74%</div>
-          <div class="leg-item"><div class="leg-swatch" style="background:rgba(16,185,129,0.55);border-color:var(--accent3)"></div>75–100%</div>
-          <div class="leg-item"><div class="leg-swatch" style="outline:2px solid var(--warn);outline-offset:-2px;background:transparent;border-color:transparent"></div>Voted</div>
+          <div class="leg-item"><div class="leg-swatch" style="background:var(--bg3);border-color:var(--border)"></div><span title="Nobody is free at this time">0% — no overlap</span></div>
+          <div class="leg-item"><div class="leg-swatch" style="background:rgba(234,179,8,0.22);border-color:rgba(234,179,8,0.5)"></div><span title="A few people are free">1–24% — low overlap</span></div>
+          <div class="leg-item"><div class="leg-swatch" style="background:rgba(249,115,22,0.35);border-color:rgba(249,115,22,0.6)"></div><span title="About half the squad is free">25–74% — medium overlap</span></div>
+          <div class="leg-item"><div class="leg-swatch" style="background:rgba(16,185,129,0.55);border-color:var(--accent3)"></div><span title="Most or all of the squad is free">75–100% — high overlap</span></div>
+          <div class="leg-item"><div class="leg-swatch" style="outline:2px solid var(--warn);outline-offset:-2px;background:transparent;border-color:transparent"></div><span title="You have voted for this slot">Voted</span></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
           <div class="sec-title" style="margin-bottom:0">Overlap Heatmap</div>
@@ -1614,22 +1314,6 @@ p.hint{font-size:11px;color:var(--text2);}
           <div id="locked-sessions-list"></div>
         </div>
 
-        <!-- Voting explanation banner -->
-        <div class="vote-explainer" id="vote-explainer">
-          <div class="vote-explainer-icon">🗳</div>
-          <div class="vote-explainer-content">
-            <div class="vote-explainer-title">How Voting Works</div>
-            <div class="vote-explainer-text">
-              See a green time block below? That means your squad is free!
-              <strong>Vote</strong> for times that work for you. When <strong>90%+ of the squad</strong> votes for the same slot, it automatically <strong>locks in</strong> 🔒 — meaning it's officially game time.
-            </div>
-            <div class="vote-explainer-steps">
-              <span class="vote-explainer-step">① Find a green block below</span>
-              <span class="vote-explainer-step">② Click <strong>Vote</strong> to say "I'm in"</span>
-              <span class="vote-explainer-step">③ 90%+ votes = auto-locked session</span>
-            </div>
-          </div>
-        </div>
 
         <div class="sec-title mt-4">Best Times to Play</div>
         <p class="hint" style="margin-bottom:10px">Consecutive free hours grouped together. Vote for the ones that work for you.</p>
@@ -1731,26 +1415,8 @@ p.hint{font-size:11px;color:var(--text2);}
     <button class="modal-close" onclick="closeModal('modal-invite')">✕</button>
     <div class="panel-title">Invite Friends</div>
     <div class="panel-sub" style="margin-bottom:16px">// SHARE THIS WITH YOUR SQUAD</div>
-    <!-- Tabs -->
-    <div class="qr-tabs">
-      <button class="qr-tab active" id="invite-tab-qr" onclick="switchInviteTab('qr')">📷 QR Code</button>
-      <button class="qr-tab" id="invite-tab-code" onclick="switchInviteTab('code')">🔑 Code & Link</button>
-    </div>
-    <!-- QR Panel -->
-    <div id="invite-panel-qr">
-      <div class="qr-wrap">
-        <div class="qr-label">Scan to join squad</div>
-        <div class="qr-box" id="qr-code-container"></div>
-        <div style="font-family:var(--font-hud);font-size:10px;color:var(--text3);text-align:center;line-height:1.6;">
-          Scanning opens the app with the squad code pre-filled
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px;">
-        <button class="btn btn-primary" onclick="copyBoth();closeModal('modal-invite')">Copy Link + Code</button>
-      </div>
-    </div>
-    <!-- Code Panel -->
-    <div id="invite-panel-code" style="display:none">
+    <!-- Code & Link Panel (only panel) -->
+    <div id="invite-panel-code">
       <div style="font-family:var(--font-hud);font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px">Join Link</div>
       <div style="background:var(--bg3);border:1px solid var(--border);padding:12px 16px;font-family:var(--font-hud);font-size:12px;color:var(--accent);letter-spacing:0.5px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:var(--r);">
         <span id="invite-link-display" style="word-break:break-all;min-width:0;flex:1;overflow:hidden;"></span>
@@ -3452,23 +3118,25 @@ function renderLockedSessions(){
     const gcalTitle=`🎮 ${gameName}`;
     const gcalDesc=`SquadSync session — ${voteCount} member${voteCount!==1?'s':''} locked in`;
     const gcalUrl=buildGCalUrl(b.dateStr,b.startH,b.endH,gcalTitle,gcalDesc);
-    return`<div class="locked-card">
-      <div style="display:flex;align-items:center;gap:14px;">
-        <span class="locked-icon">🔒</span>
-        <div>
-          <div style="display:flex;align-items:baseline;gap:8px;">
-            <span class="locked-day">${esc(dayName)}</span>
-            <span style="font-family:var(--font-hud);font-size:10px;color:var(--text3)">${esc(dateLabel)} · ${esc(durLabel)}</span>
+    return`<div class="locked-card" style="flex-direction:column;align-items:stretch;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span class="locked-icon">🔒</span>
+          <div>
+            <div style="display:flex;align-items:baseline;gap:8px;">
+              <span class="locked-day">${esc(dayName)}</span>
+              <span style="font-family:var(--font-hud);font-size:10px;color:var(--text3)">${esc(dateLabel)} · ${esc(durLabel)}</span>
+            </div>
+            <div class="locked-time">${esc(time)}</div>
+            <div class="locked-sub">${voteCount} member${voteCount!==1?'s':''} confirmed</div>
           </div>
-          <div class="locked-time">${esc(time)}</div>
-          <div class="locked-sub">${voteCount} member${voteCount!==1?'s':''} confirmed</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="locked-badge">LOCKED IN</span>
+          <button class="locked-unlock" onclick="manualUnlock('${b.keys[0]}')">unlock</button>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <a class="btn-gcal" href="${gcalUrl}" target="_blank" rel="noopener" title="Add to Google Calendar">📅 Add to Calendar</a>
-        <span class="locked-badge">LOCKED IN</span>
-        <button class="locked-unlock" onclick="manualUnlock('${b.keys[0]}')">unlock</button>
-      </div>
+      <a class="btn-gcal-lg" href="${gcalUrl}" target="_blank" rel="noopener" title="Add to Google Calendar">📅 Add to Google Calendar</a>
     </div>`;
   }).join('');
 }
@@ -3615,9 +3283,9 @@ function renderBestTimes(){
         <div class="voter-list">${voterNames||'<span class="hint">No votes yet</span>'}</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
           <button class="btn btn-sm ${iVoted?'btn-warn':'btn-outline'}" id="${btnId}">${iVoted?'✓ Remove Vote':'🗳 Vote for This Block'}</button>
-          <a class="btn-gcal" href="${gcalUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📅 Add to Calendar</a>
           ${isLocked?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();manualUnlock('${repKey}')">🔓 Unlock</button>`:''}
         </div>
+        <a class="btn-gcal-lg" href="${gcalUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📅 Add to Google Calendar</a>
         <div class="free-also">Free: ${freeNames||'—'}</div>`;
       // Vote applies to all keys in block — single batched Firestore write
       panel.querySelector(`#${btnId}`).addEventListener('click',async e=>{
@@ -4416,42 +4084,7 @@ window.addEventListener('appinstalled',()=>{
   document.getElementById('pwa-banner')?.classList.remove('visible');
 });
 
-// ── QR CODE ────────────────────────────────────────────
-let _qrInstance=null;
-function generateQR(code){
-  const container=document.getElementById('qr-code-container');
-  if(!container)return;
-  container.innerHTML='';
-  if(typeof QRCode==='undefined'){
-    container.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:180px;font-family:var(--font-hud);font-size:11px;color:var(--text3)">Loading…</div>';
-    setTimeout(()=>generateQR(code),300);
-    return;
-  }
-  const url=getJoinUrl(code);
-  try{
-    new QRCode(container,{
-      text:url,
-      width:200,
-      height:200,
-      colorDark:'#000000',
-      colorLight:'#ffffff',
-      correctLevel:QRCode.CorrectLevel.M
-    });
-    // Ensure SVG displays properly
-    const svg=container.querySelector('svg');
-    if(svg){svg.style.display='block';svg.style.maxWidth='100%';svg.style.borderRadius='8px';}
-  }catch(e){
-    console.warn('QR generation failed:',e);
-    container.innerHTML=`<div style="padding:16px;text-align:center;font-family:var(--font-hud);font-size:11px;color:var(--text3)">QR unavailable<br><span style="color:var(--accent);word-break:break-all;font-size:10px">${url}</span></div>`;
-  }
-}
-window.switchInviteTab=function(tab){
-  document.getElementById('invite-panel-qr').style.display=tab==='qr'?'block':'none';
-  document.getElementById('invite-panel-code').style.display=tab==='code'?'block':'none';
-  document.getElementById('invite-tab-qr').classList.toggle('active',tab==='qr');
-  document.getElementById('invite-tab-code').classList.toggle('active',tab==='code');
-  if(tab==='qr'&&STATE.group)generateQR(STATE.group.code);
-};
+// QR code removed — invite now shows Code & Link only
 
 // Auto-fill join code from URL param
 (function checkURLJoinCode(){
@@ -4485,16 +4118,10 @@ window.openModal=function(id){
     document.getElementById('modal-code-display').textContent=STATE.group.code;
     const linkEl=document.getElementById('invite-link-display');
     if(linkEl)linkEl.textContent=getJoinUrl(STATE.group.code);
-    // Double rAF: wait for modal to be visible + laid out before drawing canvas
-    setTimeout(()=>generateQR(STATE.group.code), 50);
   }
 };
 window.closeModal=function(id){
   document.getElementById(id).classList.remove('open');
-  if(id==='modal-invite'){
-    const c=document.getElementById('qr-code-container');
-    if(c)c.innerHTML='';
-  }
 };
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
 window.toast=function(msg,err=false,celebrate=false){
