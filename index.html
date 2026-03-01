@@ -735,7 +735,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 /* ── Quick-mark Shortcuts Bar ─────────────────────────── */
 .quickmark-bar{
   display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-  padding:8px 0;margin-bottom:8px;
+  padding:8px 0;margin-bottom:4px;
 }
 .quickmark-label{
   font-family:var(--font-hud);font-size:10px;color:var(--text3);
@@ -749,13 +749,53 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 }
 .quickmark-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.06);}
 .quickmark-btn:active{transform:scale(0.96);}
+.quickmark-btn.qm-active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.1);}
+.quickmark-btn.qm-filled{border-color:rgba(157,111,255,0.6);color:var(--accent2);background:rgba(157,111,255,0.08);}
 .quickmark-clear{color:var(--danger)!important;border-color:rgba(239,68,68,0.35)!important;}
 .quickmark-clear:hover{border-color:var(--danger)!important;background:rgba(239,68,68,0.08)!important;}
+/* Day picker */
+.qm-day-picker{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:8px 10px;margin-bottom:8px;
+  background:var(--panel);border:1px solid var(--border-hi);border-radius:var(--r);
+  animation:fadeIn 0.15s ease;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.qm-day-picker-label{font-family:var(--font-hud);font-size:10px;color:var(--text2);letter-spacing:1px;width:100%;margin-bottom:4px;}
+.qm-day-chip{
+  font-family:var(--font-hud);font-size:10px;letter-spacing:0.5px;
+  padding:4px 9px;cursor:pointer;border-radius:var(--r-sm);
+  background:var(--bg3);color:var(--text3);border:1px solid var(--border);
+  transition:all 0.12s;user-select:none;
+}
+.qm-day-chip.selected{background:rgba(0,212,255,0.12);color:var(--accent);border-color:rgba(0,212,255,0.5);}
+.qm-day-chip.past{opacity:0.3;pointer-events:none;}
+.qm-picker-actions{display:flex;gap:6px;margin-left:auto;}
+.qm-apply-btn{
+  font-family:var(--font-hud);font-size:10px;letter-spacing:0.5px;padding:4px 12px;
+  background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.4);
+  border-radius:var(--r-sm);cursor:pointer;transition:all 0.15s;
+}
+.qm-apply-btn:hover{background:rgba(0,212,255,0.2);}
+.qm-apply-btn.is-clear{background:rgba(239,68,68,0.08);color:var(--danger);border-color:rgba(239,68,68,0.4);}
+.qm-apply-btn.is-clear:hover{background:rgba(239,68,68,0.16);}
+.qm-cancel-btn{
+  font-family:var(--font-hud);font-size:10px;letter-spacing:0.5px;padding:4px 10px;
+  background:none;color:var(--text3);border:1px solid var(--border);
+  border-radius:var(--r-sm);cursor:pointer;transition:all 0.15s;
+}
+.qm-cancel-btn:hover{color:var(--text2);border-color:var(--border-hi);}
 @media(max-width:480px){
   .quickmark-bar{gap:4px;justify-content:center;}
   .quickmark-label{width:100%;text-align:center;margin-right:0;margin-bottom:2px;}
   .quickmark-btn{flex:1;min-width:0;text-align:center;padding:7px 6px;font-size:9px;}
 }
+/* Vote undo toast */
+.toast-undo-wrap{display:flex;align-items:center;gap:10px;}
+.toast-undo-action{font-family:var(--font-hud);font-size:10px;letter-spacing:0.5px;padding:3px 10px;
+  background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid rgba(0,212,255,0.4);
+  border-radius:var(--r-sm);cursor:pointer;white-space:nowrap;transition:background 0.15s;}
+.toast-undo-action:hover{background:rgba(0,212,255,0.28);}
 /* ── Night Hours Toggle ───────────────────────────────── */
 .night-toggle-row{
   display:flex;align-items:center;justify-content:center;
@@ -819,7 +859,7 @@ p.hint{font-size:11px;color:var(--text2);}
 .vote-explainer-step strong{color:var(--accent);}
 .locked-card{background:linear-gradient(135deg,rgba(16,185,129,0.08) 0%,rgba(0,212,255,0.05) 100%);border:1px solid rgba(16,185,129,0.45);padding:14px 18px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;position:relative;overflow:hidden;border-radius:var(--r);}
 .locked-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent3),var(--accent));}
-.locked-card::after{content:'🔒';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:22px;opacity:0.12;}
+.locked-card::after{content:'✅';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:22px;opacity:0.12;}
 .locked-icon{font-size:18px;flex-shrink:0;}
 .locked-day{font-family:var(--font-display);font-size:20px;color:var(--accent3);min-width:36px;}
 .locked-time{font-family:var(--font-hud);font-size:12px;color:var(--text);}
@@ -1124,7 +1164,10 @@ p.hint{font-size:11px;color:var(--text2);}
         <button class="btn btn-outline btn-sm" id="copy-link-btn" onclick="copySquadLink()" title="Copy shareable link + code">
           <span id="copy-link-icon">🔗</span> Copy Invite Link
         </button>
-        <button class="btn btn-ghost btn-sm" onclick="openModal('modal-invite')">⋯ More</button>
+        <button class="btn btn-ghost btn-sm" onclick="openModal('modal-invite')" title="Share squad" style="display:flex;align-items:center;gap:5px;padding:6px 10px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          Share
+        </button>
       </div>
     </div>
     <div class="members-row" id="members-row"></div>
@@ -1140,7 +1183,7 @@ p.hint{font-size:11px;color:var(--text2);}
   <div class="tabs">
     <button class="tab-btn active" data-tab="my-avail" onclick="switchTab('my-avail')" aria-label="My Availability"><span class="tab-icon">📅</span><span class="tab-label">My Avail</span></button>
     <button class="tab-btn" data-tab="overlap" onclick="switchTab('overlap')" aria-label="Squad Overlap"><span class="tab-icon">👥</span><span class="tab-label">Overlap</span></button>
-    <button class="tab-btn" data-tab="locked-in" onclick="switchTab('locked-in')" id="tab-btn-votes" aria-label="Locked In"><span class="tab-icon">🔒</span><span class="tab-label">Locked In</span></button>
+    <button class="tab-btn" data-tab="locked-in" onclick="switchTab('locked-in')" id="tab-btn-votes" aria-label="Locked In"><span class="tab-icon">✅</span><span class="tab-label">Locked In</span></button>
     <button class="tab-btn" data-tab="roster" onclick="switchTab('roster')" aria-label="Squad Members"><span class="tab-icon">🎮</span><span class="tab-label">Squad</span></button>
   </div>
 
@@ -1289,11 +1332,11 @@ p.hint{font-size:11px;color:var(--text2);}
             </div>
           </div>
         </div>
-        <div class="legend">
-          <div class="leg-item"><div class="leg-swatch" style="background:var(--bg3);border-color:var(--border)"></div><span title="Nobody is free at this time">0% — no overlap</span></div>
-          <div class="leg-item"><div class="leg-swatch" style="background:rgba(234,179,8,0.22);border-color:rgba(234,179,8,0.5)"></div><span title="A few people are free">1–24% — low overlap</span></div>
-          <div class="leg-item"><div class="leg-swatch" style="background:rgba(249,115,22,0.35);border-color:rgba(249,115,22,0.6)"></div><span title="About half the squad is free">25–74% — medium overlap</span></div>
-          <div class="leg-item"><div class="leg-swatch" style="background:rgba(16,185,129,0.55);border-color:var(--accent3)"></div><span title="Most or all of the squad is free">75–100% — high overlap</span></div>
+        <div class="legend" id="overlap-legend">
+          <div class="leg-item"><div class="leg-swatch" style="background:var(--bg3);border-color:var(--border)"></div><span id="leg-none">0% — no overlap</span></div>
+          <div class="leg-item"><div class="leg-swatch" style="background:rgba(234,179,8,0.22);border-color:rgba(234,179,8,0.5)"></div><span id="leg-low">1–24% — low overlap</span></div>
+          <div class="leg-item"><div class="leg-swatch" style="background:rgba(249,115,22,0.35);border-color:rgba(249,115,22,0.6)"></div><span id="leg-med">25–74% — partial overlap</span></div>
+          <div class="leg-item"><div class="leg-swatch" style="background:rgba(16,185,129,0.55);border-color:var(--accent3)"></div><span id="leg-high">75–100% — high overlap</span></div>
           <div class="leg-item"><div class="leg-swatch" style="outline:2px solid var(--warn);outline-offset:-2px;background:transparent;border-color:transparent"></div><span title="You have voted for this slot">Voted</span></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
@@ -1311,7 +1354,7 @@ p.hint{font-size:11px;color:var(--text2);}
         <!-- Locked sessions moved to Locked In tab -->
         <div id="locked-sessions-cta" style="display:none;margin-bottom:16px;">
           <div class="overlap-cta" onclick="switchTab('locked-in')" style="cursor:pointer">
-            <div class="overlap-cta-text"><strong>🔒 Sessions Locked In!</strong>View your confirmed gaming sessions</div>
+            <div class="overlap-cta-text"><strong>✅ Sessions Confirmed!</strong>View your confirmed gaming sessions</div>
             <div class="overlap-cta-arrow">→</div>
           </div>
         </div>
@@ -1366,12 +1409,12 @@ p.hint{font-size:11px;color:var(--text2);}
         <!-- LEFT: Locked & pending sessions -->
         <div class="votes-main">
           <div class="votes-header">
-            <div class="sec-title" style="margin-bottom:0">🔒 Locked In Sessions</div>
+            <div class="sec-title" style="margin-bottom:0">✅ Confirmed Sessions</div>
             <div class="votes-header-hint">Confirmed game times + pending votes. Go to Overlap to vote on new times.</div>
           </div>
           <!-- LOCKED SESSIONS (full card with gcal) -->
           <div id="locked-sessions-section" style="display:none">
-            <div class="votes-section-label votes-section-locked">🔒 Confirmed — Game On!</div>
+            <div class="votes-section-label votes-section-locked">✅ Confirmed — Game On!</div>
             <div id="locked-sessions-list"></div>
           </div>
           <!-- PENDING VOTES -->
@@ -1381,8 +1424,8 @@ p.hint{font-size:11px;color:var(--text2);}
           </div>
           <!-- EMPTY STATE -->
           <div id="votes-empty" class="votes-empty">
-            <div class="votes-empty-icon">🔒</div>
-            <div class="votes-empty-title">Nothing Locked In Yet</div>
+            <div class="votes-empty-icon">✅</div>
+            <div class="votes-empty-title">Nothing Confirmed Yet</div>
             <div class="votes-empty-sub">Head to Squad Overlap, find a colored time block, and vote. When 90%+ of the squad agrees, the session locks in automatically.</div>
             <button class="btn btn-outline btn-sm" style="margin-top:14px" onclick="switchTab('overlap')">Go to Squad Overlap →</button>
           </div>
@@ -2302,6 +2345,37 @@ document.addEventListener('click',e=>{
 
 let _clearedSnapshot=null;
 let _undoTimer=null;
+let _voteSnapshot=null; // {votes, lockedSessions} for vote undo
+let _voteUndoTimer=null;
+
+function showVoteUndoToast(label){
+  // Remove any existing vote undo toast
+  document.querySelectorAll('.toast-vote-undo').forEach(t=>t.remove());
+  clearTimeout(_voteUndoTimer);
+  const el=document.createElement('div');
+  el.className='toast show toast-vote-undo';
+  el.innerHTML=`<div class="toast-undo-wrap"><span>${label}</span><button class="toast-undo-action" onclick="undoVote()">↩ Undo</button></div>`;
+  document.getElementById('toast-container').appendChild(el);
+  _voteUndoTimer=setTimeout(()=>{
+    el.classList.remove('show');
+    setTimeout(()=>el.remove(),400);
+    _voteSnapshot=null;
+  },6000);
+}
+
+window.undoVote=async function(){
+  if(!_voteSnapshot)return;
+  clearTimeout(_voteUndoTimer);
+  const{votes,lockedSessions}=_voteSnapshot;
+  _voteSnapshot=null;
+  STATE.votes=votes;
+  STATE.lockedSessions=lockedSessions;
+  await saveVotes(STATE.group.code,votes);
+  await saveLockedSessions(STATE.group.code,lockedSessions);
+  renderOverlapGrid();renderBestTimes();renderLockedSessions();
+  document.querySelectorAll('.toast-vote-undo').forEach(t=>t.remove());
+  toast('↩ Vote undone!');
+};
 
 window.clearWeekSchedule=function(){
   if(!STATE.currentWeekStart)return;
@@ -2344,12 +2418,18 @@ window.clearWeekSchedule=function(){
 window.undoClear=function(){
   if(!_clearedSnapshot)return;
   clearTimeout(_undoTimer);
-  Object.assign(STATE.mySchedule,_clearedSnapshot);
+  // Quick fill undo: remove the keys we added
+  if(_clearedSnapshot._quickFillUndo){
+    (_clearedSnapshot._addedKeys||[]).forEach(k=>delete STATE.mySchedule[k]);
+  } else {
+    // Clear undo: restore deleted keys
+    Object.assign(STATE.mySchedule,_clearedSnapshot);
+  }
   _clearedSnapshot=null;
   debounceSave();renderMyGrid();renderWeekPicker();renderOverlapGrid();renderBestTimes();
   const undoBtn=document.getElementById('undo-clear-btn');
   if(undoBtn)undoBtn.style.display='none';
-  toast('Restored! ↩');
+  toast('↩ Undone!');
 };
 
 // ── BLOCK / UNBLOCK ENTIRE DAY ─────────────────────────
@@ -2433,45 +2513,201 @@ function renderMyGrid(){
   // ── Quick-mark shortcuts bar ───────────────────────────
   const existingQM=document.getElementById('quickmark-bar');
   if(existingQM)existingQM.remove();
+  const existingPicker=document.getElementById('qm-day-picker');
+  if(existingPicker)existingPicker.remove();
+
   const qmBar=document.createElement('div');
   qmBar.id='quickmark-bar';
   qmBar.className='quickmark-bar';
+
+  const today2=toDateStr(new Date());
+  const datesArr=Array.from({length:7},(_,i)=>addDays(STATE.currentWeekStart,i));
+  const futureDates=datesArr.filter(d=>toDateStr(d)>=today2);
+
+  // Helper: check if a period is fully filled across all future days
+  function isPeriodFilled(hoursRange){
+    if(!futureDates.length)return false;
+    return futureDates.every(d=>{
+      const dk=toDateStr(d);
+      return hoursRange.every(h=>STATE.mySchedule[schedKey(dk,h)]);
+    });
+  }
+
+  const periodHours={
+    morning:Array.from({length:6},(_,i)=>i+6),
+    afternoon:Array.from({length:6},(_,i)=>i+12),
+    evening:Array.from({length:6},(_,i)=>i+18),
+    allday:HOURS.slice()
+  };
+
+  function getButtonClass(qm){
+    if(qm==='clear')return'quickmark-btn quickmark-clear';
+    const hrs=periodHours[qm];
+    if(!hrs)return'quickmark-btn';
+    return'quickmark-btn'+(isPeriodFilled(hrs)?' qm-filled':'');
+  }
+
   qmBar.innerHTML=`
     <span class="quickmark-label">Quick fill:</span>
-    <button class="quickmark-btn" data-qm="morning" title="6:00–12:00">☀️ Morning</button>
-    <button class="quickmark-btn" data-qm="afternoon" title="12:00–18:00">🌤️ Afternoon</button>
-    <button class="quickmark-btn" data-qm="evening" title="18:00–23:00">🌆 Evening</button>
-    <button class="quickmark-btn" data-qm="allday" title="All 24 hours">📅 All Day</button>
+    <button class="quickmark-btn ${isPeriodFilled(periodHours.morning)?'qm-filled':''}" data-qm="morning" title="6:00–12:00 · Double-tap to clear">☀️ Morning</button>
+    <button class="quickmark-btn ${isPeriodFilled(periodHours.afternoon)?'qm-filled':''}" data-qm="afternoon" title="12:00–18:00 · Double-tap to clear">🌤️ Afternoon</button>
+    <button class="quickmark-btn ${isPeriodFilled(periodHours.evening)?'qm-filled':''}" data-qm="evening" title="18:00–23:00 · Double-tap to clear">🌆 Evening</button>
+    <button class="quickmark-btn ${isPeriodFilled(periodHours.allday)?'qm-filled':''}" data-qm="allday" title="All 24 hours">📅 All Day</button>
     <button class="quickmark-btn quickmark-clear" data-qm="clear" title="Clear this week">✕ Clear</button>`;
+
+  // Track active picker state
+  let _activePicker=null; // {qm, isClear}
+  const dayNames2=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  function openDayPicker(qm, isClear){
+    // Close any existing picker first
+    const existing=document.getElementById('qm-day-picker');
+    if(existing)existing.remove();
+
+    // If same button clicked again while its picker is open, just close
+    if(_activePicker===qm){
+      _activePicker=null;
+      qmBar.querySelectorAll('[data-qm]').forEach(b=>b.classList.remove('qm-active'));
+      return;
+    }
+    _activePicker=qm;
+    qmBar.querySelectorAll('[data-qm]').forEach(b=>b.classList.remove('qm-active'));
+    qmBar.querySelector(`[data-qm="${qm}"]`)?.classList.add('qm-active');
+
+    const picker=document.createElement('div');
+    picker.id='qm-day-picker';
+    picker.className='qm-day-picker';
+
+    const periodLabels={morning:'Morning (06:00–11:00)',afternoon:'Afternoon (12:00–17:00)',evening:'Evening (18:00–23:00)',allday:'All Day'};
+    const action=isClear?'Clear':'Fill';
+    picker.innerHTML=`<div class="qm-day-picker-label">${action} ${periodLabels[qm]||qm} on which days?</div>`;
+
+    // Day chips — pre-select weekdays (Mon-Fri) by default, or future days only
+    const selectedDays=new Set();
+    datesArr.forEach((d,i)=>{
+      const dk=toDateStr(d);
+      const isPast=dk<today2;
+      const dayOfWeek=d.getDay(); // 0=Sun, 6=Sat
+      const isWeekday=dayOfWeek>=1&&dayOfWeek<=5;
+      const chip=document.createElement('div');
+      chip.className='qm-day-chip'+(isPast?' past':'')+((!isPast&&isWeekday)?' selected':'');
+      chip.textContent=dayNames2[d.getDay()]+' '+`${d.getMonth()+1}/${d.getDate()}`;
+      chip.dataset.dk=dk;
+      if(!isPast&&isWeekday)selectedDays.add(dk);
+      if(!isPast){
+        chip.addEventListener('click',()=>{
+          chip.classList.toggle('selected');
+          if(chip.classList.contains('selected'))selectedDays.add(dk);
+          else selectedDays.delete(dk);
+        });
+      }
+      picker.appendChild(chip);
+    });
+
+    const actions=document.createElement('div');
+    actions.className='qm-picker-actions';
+    const applyBtn=document.createElement('button');
+    applyBtn.className='qm-apply-btn'+(isClear?' is-clear':'');
+    applyBtn.textContent=isClear?'✕ Clear selected days':'✓ Apply to selected days';
+    const cancelBtn=document.createElement('button');
+    cancelBtn.className='qm-cancel-btn';
+    cancelBtn.textContent='Cancel';
+
+    applyBtn.addEventListener('click',()=>{
+      const hrs=periodHours[qm];
+      if(!selectedDays.size){toast('Select at least one day.');return;}
+
+      // Snapshot for undo
+      const snapshot={};
+      selectedDays.forEach(dk=>hrs.forEach(h=>{const k=schedKey(dk,h);if(STATE.mySchedule[k])snapshot[k]=true;}));
+      const removedSnapshot={}; // what we'll undo to
+
+      if(isClear){
+        // Snapshot what we're removing
+        selectedDays.forEach(dk=>hrs.forEach(h=>{
+          const k=schedKey(dk,h);
+          if(STATE.mySchedule[k]){removedSnapshot[k]=true;delete STATE.mySchedule[k];}
+        }));
+        _clearedSnapshot={...removedSnapshot};
+      } else {
+        // Save current state of those slots for undo (only slots not already set)
+        const addedKeys=[];
+        selectedDays.forEach(dk=>hrs.forEach(h=>{
+          const k=schedKey(dk,h);
+          if(!STATE.mySchedule[k])addedKeys.push(k);
+          STATE.mySchedule[k]=true;
+        }));
+        // Undo = remove what we just added
+        _clearedSnapshot={_quickFillUndo:true, _addedKeys:addedKeys};
+      }
+
+      debounceSave();renderMyGrid();renderWeekPicker();
+      clearTimeout(window._overlapTimer);window._overlapTimer=setTimeout(()=>{renderOverlapGrid();renderBestTimes();},400);
+
+      const periodLabels2={morning:'Morning',afternoon:'Afternoon',evening:'Evening',allday:'All day'};
+      const daysLabel=[...selectedDays].length===7?'all days':`${[...selectedDays].length} day(s)`;
+      if(isClear)toast(`${periodLabels2[qm]} cleared for ${daysLabel}`);
+      else toast(`${periodLabels2[qm]} filled for ${daysLabel}`);
+
+      // Show undo button
+      const undoBtn=document.getElementById('undo-clear-btn');
+      if(undoBtn)undoBtn.style.display='block';
+      clearTimeout(_undoTimer);
+      _undoTimer=setTimeout(()=>{_clearedSnapshot=null;if(undoBtn)undoBtn.style.display='none';},8000);
+
+      // Close picker
+      picker.remove();
+      _activePicker=null;
+      qmBar.querySelectorAll('[data-qm]').forEach(b=>b.classList.remove('qm-active'));
+    });
+
+    cancelBtn.addEventListener('click',()=>{
+      picker.remove();
+      _activePicker=null;
+      qmBar.querySelectorAll('[data-qm]').forEach(b=>b.classList.remove('qm-active'));
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(applyBtn);
+    picker.appendChild(actions);
+
+    // Insert picker below the quickmark bar
+    qmBar.parentElement.insertBefore(picker,qmBar.nextSibling);
+  }
+
   qmBar.addEventListener('click',e=>{
     const btn=e.target.closest('[data-qm]');
     if(!btn||!STATE.currentWeekStart)return;
-    if(navigator.vibrate)navigator.vibrate(15); // Haptic feedback
+    if(navigator.vibrate)navigator.vibrate(15);
     const qm=btn.dataset.qm;
-    const today2=toDateStr(new Date());
-    const datesArr=Array.from({length:7},(_,i)=>addDays(STATE.currentWeekStart,i));
-    const futureDates=datesArr.filter(d=>toDateStr(d)>=today2);
-    if(!futureDates.length){toast('No future days this week to fill.');return;}
-    let hoursRange=[];
-    if(qm==='morning')hoursRange=Array.from({length:6},(_,i)=>i+6);   // 6-11
-    else if(qm==='afternoon')hoursRange=Array.from({length:6},(_,i)=>i+12); // 12-17
-    else if(qm==='evening')hoursRange=Array.from({length:6},(_,i)=>i+18); // 18-23
-    else if(qm==='allday')hoursRange=HOURS.slice();
-    else if(qm==='clear'){
-      // Clear all future slots this week
-      futureDates.forEach(d=>{const dk=toDateStr(d);HOURS.forEach(h=>{delete STATE.mySchedule[schedKey(dk,h)];});});
+
+    if(qm==='clear'){
+      // Clear still works immediately with undo (existing behavior)
+      if(!futureDates.length){toast('No future days this week to fill.');return;}
+      let hasSlots=false;
+      futureDates.forEach(d=>{const dk=toDateStr(d);HOURS.forEach(h=>{if(STATE.mySchedule[schedKey(dk,h)])hasSlots=true;});});
+      if(!hasSlots){toast('Nothing to clear this week.');return;}
+      _clearedSnapshot={};
+      futureDates.forEach(d=>{const dk=toDateStr(d);HOURS.forEach(h=>{const k=schedKey(dk,h);if(STATE.mySchedule[k]){_clearedSnapshot[k]=true;delete STATE.mySchedule[k];}});});
       debounceSave();renderMyGrid();renderWeekPicker();
       clearTimeout(window._overlapTimer);window._overlapTimer=setTimeout(()=>{renderOverlapGrid();renderBestTimes();},400);
-      toast('Week cleared');return;
+      const undoBtn=document.getElementById('undo-clear-btn');
+      if(undoBtn)undoBtn.style.display='block';
+      clearTimeout(_undoTimer);
+      _undoTimer=setTimeout(()=>{_clearedSnapshot=null;if(undoBtn)undoBtn.style.display='none';},8000);
+      toast('Week cleared — ↩ Undo available for 8s');
+      // Close any open picker
+      const ep=document.getElementById('qm-day-picker');if(ep)ep.remove();
+      _activePicker=null;
+      return;
     }
-    futureDates.forEach(d=>{
-      const dk=toDateStr(d);
-      hoursRange.forEach(h=>{STATE.mySchedule[schedKey(dk,h)]=true;});
-    });
-    debounceSave();renderMyGrid();renderWeekPicker();
-    clearTimeout(window._overlapTimer);window._overlapTimer=setTimeout(()=>{renderOverlapGrid();renderBestTimes();},400);
-    const labels={morning:'Morning (06:00–11:00)',afternoon:'Afternoon (12:00–17:00)',evening:'Evening (18:00–23:00)',allday:'All day'};
-    toast(`${labels[qm]} marked for ${futureDates.length} day${futureDates.length!==1?'s':''}`);
+
+    if(!futureDates.length){toast('No future days this week to fill.');return;}
+
+    const hrs=periodHours[qm];
+    const filled=isPeriodFilled(hrs);
+    // Open day picker — action is "clear" if already fully filled (toggle behavior)
+    openDayPicker(qm, filled);
   });
   // Insert the quick-mark bar between night toggle and grid-scroll
   grid.parentElement.parentElement.insertBefore(qmBar,grid.parentElement);
@@ -2773,12 +3009,46 @@ window.overlapWeekNav=function(dir){
   renderOverlapGrid();
 };
 
+function renderOverlapLegend(){
+  if(!STATE.group)return;
+  const total=STATE.group.members.length;
+  const legLow=document.getElementById('leg-low');
+  const legMed=document.getElementById('leg-med');
+  const legHigh=document.getElementById('leg-high');
+  if(!legLow||!legMed||!legHigh)return;
+  if(total<=2){
+    // 2 person squad: just 2 states
+    legLow.textContent='1 of 2 free — partial';
+    legLow.title='One squad member is free';
+    legMed.parentElement.style.display='none'; // hide orange for 2-person
+    legHigh.textContent='2 of 2 free — both free!';
+    legHigh.title='Both squad members are free';
+  } else if(total<=4){
+    legMed.parentElement.style.display=''; // show all 3 levels
+    legLow.textContent=`1 of ${total} free`;
+    legLow.title='Only one person is free';
+    legMed.textContent=`${Math.ceil(total/2)}–${total-1} of ${total} free`;
+    legMed.title='About half the squad is free';
+    legHigh.textContent=`All ${total} free`;
+    legHigh.title='The full squad is free';
+  } else {
+    legMed.parentElement.style.display='';
+    legLow.textContent='1–25% of squad free';
+    legLow.title='A few members are free';
+    legMed.textContent='25–74% of squad free';
+    legMed.title='About half the squad is free';
+    legHigh.textContent='75–100% of squad free';
+    legHigh.title='Most or all of the squad is free';
+  }
+}
+
 function renderOverlapGrid(){
   const headerEl=document.getElementById('overlap-grid-header');
   const grid=document.getElementById('overlap-grid');
   if(!grid)return;
   grid.innerHTML='';
   if(headerEl)headerEl.innerHTML='';
+  renderOverlapLegend();
 
   const ws=addDays(weekStart(new Date()),STATE.overlapWeekOffset*7);
   const dates=Array.from({length:7},(_,i)=>addDays(ws,i));
@@ -2817,7 +3087,24 @@ function renderOverlapGrid(){
       const isToday=dk===today;
       const isCurrentHour=isToday&&h===nowH;
       let cls='gc';
-      if(pctN>=0.75)cls+=' ov4';else if(pctN>=0.25)cls+=' ov3';else if(pctN>0)cls+=' ov1';
+      // Dynamic thresholds based on squad size
+      // For small squads: exact member count thresholds; larger squads: percentage bands
+      let ov='';
+      if(n>0){
+        if(total<=2){
+          // 2 people: 1=yellow(50%), 2=green(100%)
+          ov=n>=total?'ov4':'ov1';
+        } else if(total<=4){
+          // 3-4 people: 1=yellow, ≥half=orange, all=green
+          if(n>=total)ov='ov4';
+          else if(n>=Math.ceil(total/2))ov='ov3';
+          else ov='ov1';
+        } else {
+          // 5+ people: percentage bands
+          if(pctN>=0.75)ov='ov4';else if(pctN>=0.25)ov='ov3';else ov='ov1';
+        }
+      }
+      if(ov)cls+=' '+ov;
       if(voteArr.length>0)cls+=' voted';
       if(STATE.lockedSessions&&STATE.lockedSessions[key])cls+=' locked-cell';
       if(isToday)cls+=' today-col';
@@ -2947,6 +3234,9 @@ function renderNudgeBanner(){
 const LOCK_THRESHOLD=0.9; // 90% of available members must vote
 
 async function toggleVote(key){
+  // Snapshot for undo
+  _voteSnapshot={votes:JSON.parse(JSON.stringify(STATE.votes)),lockedSessions:JSON.parse(JSON.stringify(STATE.lockedSessions))};
+
   const votes={...STATE.votes};
   const arr=votes[key]?[...votes[key]]:[];
   const idx=arr.indexOf(STATE.user.id);
@@ -2972,8 +3262,8 @@ async function toggleVote(key){
     const locked={...STATE.lockedSessions,[key]:true};
     STATE.lockedSessions=locked;
     await saveLockedSessions(STATE.group.code,locked);
-    toast(`🔒 Session locked in! ${voteCount}/${totalMembers} members confirmed.`,false,true);
-    await logActivity(`🔒 locked in a session on ${dateLabel} ${timeLabel}`);
+    toast(`✅ Session confirmed! ${voteCount}/${totalMembers} members agreed.`,false,true);
+    await logActivity(`✅ confirmed a session on ${dateLabel} ${timeLabel}`);
   } else if(STATE.lockedSessions[key]&&voteCount<minVotesNeeded){
     const locked={...STATE.lockedSessions};
     delete locked[key];
@@ -2986,11 +3276,19 @@ async function toggleVote(key){
   }
 
   renderOverlapGrid();renderBestTimes();renderLockedSessions();
+  // Show undo toast (only for non-lock actions, lock events have their own celebrate toast)
+  const isConfirmEvent=totalMembers>0&&(votes[key]||[]).length>=minVotesNeeded;
+  if(!isConfirmEvent){
+    const voteLabel=voting?`Voted for ${dateLabel} ${String(h).padStart(2,'0')}:00`:`Vote removed`;
+    showVoteUndoToast(voteLabel);
+  }
 }
 
 // ── BATCH VOTE: vote/unvote an entire block in one Firestore write ──
 async function toggleVoteBlock(keys){
   if(!keys||!keys.length||!STATE.user||!STATE.group)return;
+  // Snapshot for undo
+  _voteSnapshot={votes:JSON.parse(JSON.stringify(STATE.votes)),lockedSessions:JSON.parse(JSON.stringify(STATE.lockedSessions))};
   const votes={...STATE.votes};
 
   // Determine direction: if user already voted ANY key in block, we unvote all. Otherwise vote all.
@@ -3028,7 +3326,7 @@ async function toggleVoteBlock(keys){
   if(JSON.stringify(locked)!==JSON.stringify(STATE.lockedSessions)){
     STATE.lockedSessions=locked;
     await saveLockedSessions(STATE.group.code,locked);
-    if(anyNewLock)toast(`🔒 Session locked in! ${minVotesNeeded}/${totalMembers} confirmed.`,false,true);
+    if(anyNewLock)toast(`✅ Session confirmed! ${minVotesNeeded}/${totalMembers} members agreed.`,false,true);
   }
 
   // Single activity log entry for the whole block
@@ -3042,9 +3340,11 @@ async function toggleVoteBlock(keys){
   await logActivity(anyVoted?`removed vote for ${dateLabel} ${timeLabel} (${durH}h block)`:`voted for ${dateLabel} ${timeLabel} (${durH}h block)`);
 
   renderOverlapGrid();renderBestTimes();renderLockedSessions();
+  if(!anyNewLock){
+    const voteLabel=anyVoted?`Vote removed for ${dateLabel} ${timeLabel}`:`Voted for ${dateLabel} ${timeLabel} (${durH}h)`;
+    showVoteUndoToast(voteLabel);
+  }
 }
-
-async function manualUnlock(key){
   const locked={...STATE.lockedSessions};
   delete locked[key];
   STATE.lockedSessions=locked;
@@ -3059,7 +3359,7 @@ async function manualLockIn(key){
   STATE.lockedSessions=locked;
   await saveLockedSessions(STATE.group.code,locked);
   renderOverlapGrid();renderBestTimes();renderLockedSessions();
-  toast('🔒 Session locked in!');
+  toast('✅ Session confirmed!');
 }
 window.manualLockIn=manualLockIn;
 
@@ -3144,7 +3444,7 @@ function renderLockedSessions(){
     return`<div class="locked-card" style="flex-direction:column;align-items:stretch;gap:12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:14px;">
-          <span class="locked-icon">🔒</span>
+          <span class="locked-icon">✅</span>
           <div>
             <div style="display:flex;align-items:baseline;gap:8px;">
               <span class="locked-day">${esc(dayName)}</span>
@@ -3155,7 +3455,7 @@ function renderLockedSessions(){
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="locked-badge">LOCKED IN</span>
+          <span class="locked-badge">✅ CONFIRMED</span>
           <button class="locked-unlock" onclick="manualUnlock('${b.keys[0]}');renderLockedSessions();renderVotesTab();">unlock</button>
         </div>
       </div>
@@ -3267,7 +3567,7 @@ function renderBestTimes(){
         </div>
       </div>
       <div class="bt-right">
-        ${isLocked?'<span style="font-family:var(--font-hud);font-size:10px;color:var(--accent3);border:1px solid rgba(16,185,129,0.5);padding:3px 8px;">🔒 LOCKED</span>':''}
+        ${isLocked?'<span style="font-family:var(--font-hud);font-size:10px;color:var(--accent3);border:1px solid rgba(16,185,129,0.5);padding:3px 8px;">✅ CONFIRMED</span>':''}
         ${!isLocked&&voteArr.length>0?`<div class="vote-pill">🗳 ${voteArr.length}</div>`:''}
         <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
         <span class="pct-label">${pct}%</span>
@@ -3282,7 +3582,7 @@ function renderBestTimes(){
       const votePct=Math.round(voteArr.length/Math.max(total,1)*100);
       const lockBarColor=votePct>=90?'var(--accent3)':votePct>=50?'var(--warn)':'var(--accent2)';
       const lockStatus=isLocked
-        ?`<div class="lock-status locked-status">🔒 LOCKED IN — confirmed!</div>`
+        ?`<div class="lock-status locked-status">✅ CONFIRMED — game on!</div>`
         :votePct>=90
           ?`<div class="lock-status ready-status">✨ 90%+ — ready to lock!</div>`
           :`<div class="lock-status progress-status">Need 90% · ${votePct}% there</div>`;
@@ -3300,7 +3600,7 @@ function renderBestTimes(){
         :`SquadSync session — ${memberIds.length}/${total} squad members free`;
       const gcalUrl=buildGCalUrl(dateStr,startH,endH,gcalTitle,gcalDesc);
       panel.innerHTML=`
-        <div class="vote-panel-title">${isLocked?'🔒 LOCKED IN':'🗳 Votes'} — ${esc(dayName)} ${esc(dateLabel)} · ${esc(timeStr)}</div>
+        <div class="vote-panel-title">${isLocked?'✅ CONFIRMED':'🗳 Votes'} — ${esc(dayName)} ${esc(dateLabel)} · ${esc(timeStr)}</div>
         <div class="lock-progress-wrap"><div class="lock-progress-bar" style="width:${Math.min(votePct,100)}%;background:${lockBarColor}"></div></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:12px;">${lockStatus}<span style="font-family:var(--font-hud);font-size:10px;color:var(--text3)">${voteArr.length} / ${total} votes</span></div>
         <div class="voter-list">${voterNames||'<span class="hint">No votes yet</span>'}</div>
