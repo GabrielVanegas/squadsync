@@ -188,7 +188,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 /* ── TABS ──────────────────────────────────────────── */
 .tabs{background:var(--panel);border-bottom:1px solid var(--border);display:flex;padding:0 20px;overflow-x:auto;}
 .tab-btn{font-family:var(--font-display);font-size:15px;letter-spacing:2.5px;text-transform:uppercase;padding:14px 20px;cursor:pointer;color:var(--text2);background:none;border:none;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;position:relative;display:flex;align-items:center;gap:6px;}
-.tab-icon{display:none;font-size:18px;line-height:1;}
+.tab-icon{display:inline-flex;align-items:center;font-size:18px;line-height:1;}
 .tab-label{} /* visible on all sizes */
 .tab-badge{position:absolute;top:10px;right:6px;background:var(--accent3);color:#000;font-family:var(--font-hud);font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center;line-height:1.5;}
 
@@ -709,7 +709,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   .tab-btn[data-tab="overlap"].active{border-top-color:var(--accent3);color:var(--accent3);}
   .tab-btn[data-tab="locked-in"].active{border-top-color:var(--accent3);color:var(--accent3);}
   .tab-btn[data-tab="roster"].active{border-top-color:var(--accent2);color:var(--accent2);}
-  .tab-icon{display:block !important;}
   .tab-btn::before{font-size:16px;line-height:1;} /* tab icons via attr below */
 }
 
@@ -1161,12 +1160,9 @@ p.hint{font-size:11px;color:var(--text2);}
           <div class="code-lbl">Squad Code</div>
           <div class="code-val" id="group-code-display">——</div>
         </div>
-        <button class="btn btn-outline btn-sm" id="copy-link-btn" onclick="copySquadLink()" title="Copy shareable link + code">
-          <span id="copy-link-icon">🔗</span> Copy Invite Link
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="openModal('modal-invite')" title="Share squad" style="display:flex;align-items:center;gap:5px;padding:6px 10px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-          Share
+        <button class="btn btn-outline btn-sm" id="share-btn" onclick="shareSquadLink()" title="Copy shareable link" style="display:flex;align-items:center;gap:6px;">
+          <svg id="share-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          <span id="share-btn-label">Share</span>
         </button>
       </div>
     </div>
@@ -1182,7 +1178,7 @@ p.hint{font-size:11px;color:var(--text2);}
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="my-avail" onclick="switchTab('my-avail')" aria-label="My Availability"><span class="tab-icon">📅</span><span class="tab-label">My Avail</span></button>
-    <button class="tab-btn" data-tab="overlap" onclick="switchTab('overlap')" aria-label="Squad Overlap"><span class="tab-icon">👥</span><span class="tab-label">Overlap</span></button>
+    <button class="tab-btn" data-tab="overlap" onclick="switchTab('overlap')" aria-label="Squad Overlap"><span class="tab-icon" style="display:flex;align-items:center;justify-content:center;"><img src="data:image/jpeg;base64,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" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-bottom:1px;" alt="dap"></span><span class="tab-label">Overlap</span></button>
     <button class="tab-btn" data-tab="locked-in" onclick="switchTab('locked-in')" id="tab-btn-votes" aria-label="Locked In"><span class="tab-icon">✅</span><span class="tab-label">Locked In</span></button>
     <button class="tab-btn" data-tab="roster" onclick="switchTab('roster')" aria-label="Squad Members"><span class="tab-icon">🎮</span><span class="tab-label">Squad</span></button>
   </div>
@@ -1474,8 +1470,8 @@ p.hint{font-size:11px;color:var(--text2);}
       <div class="invite-big-code" id="modal-code-display">——</div>
       <p class="hint" style="text-align:center;margin-bottom:18px">Send both — friends open the link, click "Join Squad", and enter the code.</p>
       <div class="flex gap-2" style="justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="copyBoth();closeModal('modal-invite')">Copy Both</button>
-        <button class="btn btn-ghost" onclick="copyCode();closeModal('modal-invite')">Code Only</button>
+        <button class="btn btn-primary" onclick="copyBoth()">Copy Both</button>
+        <button class="btn btn-ghost" onclick="copyCode()">Code Only</button>
       </div>
     </div>
   </div>
@@ -2418,8 +2414,11 @@ window.clearWeekSchedule=function(){
 window.undoClear=function(){
   if(!_clearedSnapshot)return;
   clearTimeout(_undoTimer);
-  // Quick fill undo: remove the keys we added
-  if(_clearedSnapshot._quickFillUndo){
+  if(_clearedSnapshot._dragSnapshot){
+    // Drag undo: restore full pre-drag schedule
+    STATE.mySchedule=_clearedSnapshot._dragSnapshot;
+  } else if(_clearedSnapshot._quickFillUndo){
+    // Quick fill undo: remove the keys we added
     (_clearedSnapshot._addedKeys||[]).forEach(k=>delete STATE.mySchedule[k]);
   } else {
     // Clear undo: restore deleted keys
@@ -2847,16 +2846,40 @@ function renderMyGrid(){
 
 // ── DRAG ──────────────────────────────────────────────
 function startDrag(key){
+  // Snapshot the full schedule before the drag for undo
+  _clearedSnapshot={_quickFillUndo:true,_addedKeys:[],_dragSnapshot:JSON.parse(JSON.stringify(STATE.mySchedule))};
+  STATE._dragChanged=[];
   STATE.isDragging=true;STATE.dragVal=!STATE.mySchedule[key];toggleMyCell(key);
+  STATE._dragChanged.push(key);
 }
 function contDrag(key){
   if(!STATE.isDragging)return;
   if(!!STATE.mySchedule[key]===STATE.dragVal)return;
   toggleMyCell(key);
+  STATE._dragChanged&&STATE._dragChanged.push(key);
 }
-document.addEventListener('mouseup',()=>STATE.isDragging=false);
+
+function _finishDragUndo(){
+  // Called when drag ends — show undo button if anything changed
+  if(!STATE._dragChanged||STATE._dragChanged.length===0){_clearedSnapshot=null;return;}
+  const undoBtn=document.getElementById('undo-clear-btn');
+  if(undoBtn)undoBtn.style.display='block';
+  clearTimeout(_undoTimer);
+  _undoTimer=setTimeout(()=>{
+    _clearedSnapshot=null;
+    STATE._dragChanged=[];
+    if(undoBtn)undoBtn.style.display='none';
+  },8000);
+  STATE._dragChanged=[];
+}
+
+document.addEventListener('mouseup',()=>{
+  if(STATE.isDragging)_finishDragUndo();
+  STATE.isDragging=false;
+});
 document.addEventListener('touchend',()=>{
   clearTimeout(STATE._longPressTimer);
+  if(STATE.isDragging)_finishDragUndo();
   STATE.isDragging=false;
   STATE._touchStartX=null;STATE._touchStartY=null;
   STATE._touchIntent=null;STATE._touchKey=null;STATE._touchMoved=false;
@@ -4041,18 +4064,64 @@ window.copyBoth=function(){
   const text=`Join my squad on SquadSync!\n🔗 ${getJoinUrl(code)}\n🎮 Squad code: ${code}`;
   navigator.clipboard.writeText(text).then(()=>toast('Copied! Ready to paste.')).catch(()=>toast('Copied!'));
 };
-window.copySquadLink=function(){
+// Green flash helper — reusable for any button
+function flashCopied(btn, originalHTML){
+  btn.innerHTML='✓ Copied!';
+  btn.style.borderColor='var(--accent3)';
+  btn.style.color='var(--accent3)';
+  btn.style.background='rgba(16,185,129,0.08)';
+  setTimeout(()=>{
+    btn.innerHTML=originalHTML;
+    btn.style.borderColor='';
+    btn.style.color='';
+    btn.style.background='';
+  },2000);
+}
+
+window.shareSquadLink=function(){
   const code=STATE.group?.code||'';
   const text=`Join my squad on SquadSync!\n🔗 ${getJoinUrl(code)}\n🎮 Squad code: ${code}`;
   navigator.clipboard.writeText(text).then(()=>{
-    const btn=document.getElementById('copy-link-btn');
+    const btn=document.getElementById('share-btn');
     if(btn){
       const orig=btn.innerHTML;
-      btn.innerHTML='✓ Copied!';
-      btn.style.borderColor='var(--accent3)';
-      btn.style.color='var(--accent3)';
-      setTimeout(()=>{btn.innerHTML=orig;btn.style.borderColor='';btn.style.color='';},2000);
+      flashCopied(btn,orig);
     }
+  }).catch(()=>{
+    // Fallback: open modal so they can copy manually
+    openModal('modal-invite');
+  });
+};
+
+window.copySquadLink=window.shareSquadLink; // keep old ref working
+
+window.copyCode=function(){
+  const code=STATE.group?.code||'';
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn=document.querySelector('[onclick="copyCode();closeModal(\'modal-invite\')"]') ||
+              document.querySelector('[onclick*="copyCode"]');
+    if(btn){const orig=btn.innerHTML;flashCopied(btn,orig);}
+    else toast('Code copied!');
+  }).catch(()=>toast('Code copied!'));
+};
+
+window.copyLink=function(){
+  const code=STATE.group?.code||'';
+  const url=getJoinUrl(code);
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn=document.querySelector('[onclick="copyLink()"]');
+    if(btn){const orig=btn.innerHTML;flashCopied(btn,orig);}
+    else toast('Link copied!');
+  }).catch(()=>toast('Link copied!'));
+};
+
+window.copyBoth=function(){
+  const code=STATE.group?.code||'';
+  const text=`Join my squad on SquadSync!\n🔗 ${getJoinUrl(code)}\n🎮 Squad code: ${code}`;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.querySelector('[onclick*="copyBoth"]');
+    if(btn){const orig=btn.innerHTML;flashCopied(btn,orig);setTimeout(()=>closeModal('modal-invite'),1800);}
+    else{toast('Copied!');closeModal('modal-invite');}
   }).catch(()=>toast('Could not copy',true));
 };
 window.switchTab=function(id,scrollTo){
