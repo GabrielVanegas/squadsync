@@ -3345,6 +3345,8 @@ async function toggleVoteBlock(keys){
     showVoteUndoToast(voteLabel);
   }
 }
+
+async function manualUnlock(key){
   const locked={...STATE.lockedSessions};
   delete locked[key];
   STATE.lockedSessions=locked;
