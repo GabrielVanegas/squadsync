@@ -1319,7 +1319,7 @@ p.hint{font-size:11px;color:var(--text2);}
           <div class="vote-explainer-content">
             <div class="vote-explainer-title">How Voting Works</div>
             <div class="vote-explainer-text">
-              Colored cells show when your squad overlaps. <strong>Vote</strong> for times that work for you. When <strong>90%+ of the squad</strong> votes for the same slot, it automatically <strong>locks in</strong> 🔒 — meaning it's officially game time.
+              Colored cells show when your squad overlaps. <strong>Vote</strong> for times that work for you. When <strong>90%+ of members who've set availability</strong> vote for the same slot, it automatically <strong>locks in</strong> 🔒 — meaning it's officially game time.
             </div>
             <div class="vote-explainer-steps">
               <span class="vote-explainer-step">① Find a colored overlap block below</span>
@@ -1357,7 +1357,7 @@ p.hint{font-size:11px;color:var(--text2);}
 
 
         <div class="sec-title mt-4">Best Times to Play</div>
-        <p class="hint" style="margin-bottom:10px">Consecutive free hours grouped together. Vote for the ones that work for you.</p>
+        <p class="hint" style="margin-bottom:10px">Top overlapping slots across all 4 weeks — grouped by consecutive hours. Vote for the ones that work for you.</p>
         <div id="incomplete-banner" class="incomplete-banner" style="display:none;margin-bottom:12px;"></div>
         <div id="nudge-banner" class="nudge-banner" style="display:none;margin-bottom:14px;">
           <span class="nudge-text"></span>
@@ -1847,9 +1847,30 @@ async function saveActivity(groupCode,log){
 function subscribeToGroup(code){
   if(STATE.unsub)STATE.unsub();
   let _prevMemberIds=null;
+  // Helper: refresh DST offsets for all members silently
+  function refreshMemberOffsets(members){
+    let changed=false;
+    const updated=members.map(m=>{
+      if(!m.tz)return m;
+      const live=getLiveOffset(m.tz);
+      if(live!==null&&live!==m.offset){changed=true;return{...m,offset:live};}
+      return m;
+    });
+    return{updated,changed};
+  }
   const unsubGroup=onSnapshot(doc(db,'groups',code),snap=>{
     if(!snap.exists())return;
     const newData=snap.data();
+    // Refresh DST-aware offsets for all members on each group load
+    const{updated,changed}=refreshMemberOffsets(newData.members||[]);
+    if(changed){
+      newData.members=updated;
+      // Also update STATE.user.offset if it changed
+      const me=updated.find(m=>m.id===STATE.user?.id);
+      if(me&&STATE.user)STATE.user={...STATE.user,offset:me.offset};
+      // Fire-and-forget write back to Firestore
+      saveGroup(newData).catch(()=>{});
+    }
     if(_prevMemberIds){
       const newMembers=newData.members.filter(m=>!_prevMemberIds.includes(m.id)&&m.id!==STATE.user?.id);
       // Log new joins to Firebase (not local — logActivity handles that)
@@ -1939,6 +1960,7 @@ async function tryRestoreSession(){
 window.switchToSquad=async function(userId,groupCode){
   closeModal('modal-squads');
   if(STATE.unsub)STATE.unsub();
+  STATE.overlayMembers=new Set(); // Clear stale overlay state from previous squad
   const ok=await loadSquadSession(userId,groupCode);
   if(!ok){
     // Squad no longer exists or member was removed — clean up stale entry
@@ -2348,6 +2370,13 @@ function showVoteUndoToast(label){
   // Remove any existing vote undo toast
   document.querySelectorAll('.toast-vote-undo').forEach(t=>t.remove());
   clearTimeout(_voteUndoTimer);
+  // Hide week-clear undo if it's open to avoid two concurrent undos
+  const undoBtn=document.getElementById('undo-clear-btn');
+  if(undoBtn&&undoBtn.style.display!=='none'){
+    undoBtn.style.display='none';
+    clearTimeout(_undoTimer);
+    _clearedSnapshot=null;
+  }
   const el=document.createElement('div');
   el.className='toast show toast-vote-undo';
   el.innerHTML=`<div class="toast-undo-wrap"><span>${label}</span><button class="toast-undo-action" onclick="undoVote()">↩ Undo</button></div>`;
@@ -2581,18 +2610,18 @@ function renderMyGrid(){
     const action=isClear?'Clear':'Fill';
     picker.innerHTML=`<div class="qm-day-picker-label">${action} ${periodLabels[qm]||qm} on which days?</div>`;
 
-    // Day chips — pre-select weekdays (Mon-Fri) by default, or future days only
+    // Day chips — pre-select gaming days (Fri/Sat/Sun) by default, or future days only
     const selectedDays=new Set();
     datesArr.forEach((d,i)=>{
       const dk=toDateStr(d);
       const isPast=dk<today2;
-      const dayOfWeek=d.getDay(); // 0=Sun, 6=Sat
-      const isWeekday=dayOfWeek>=1&&dayOfWeek<=5;
+      const dayOfWeek=d.getDay(); // 0=Sun, 5=Fri, 6=Sat
+      const isGamingDay=dayOfWeek===0||dayOfWeek===5||dayOfWeek===6;
       const chip=document.createElement('div');
-      chip.className='qm-day-chip'+(isPast?' past':'')+((!isPast&&isWeekday)?' selected':'');
+      chip.className='qm-day-chip'+(isPast?' past':'')+((!isPast&&isGamingDay)?' selected':'');
       chip.textContent=dayNames2[d.getDay()]+' '+`${d.getMonth()+1}/${d.getDate()}`;
       chip.dataset.dk=dk;
-      if(!isPast&&isWeekday)selectedDays.add(dk);
+      if(!isPast&&isGamingDay)selectedDays.add(dk);
       if(!isPast){
         chip.addEventListener('click',()=>{
           chip.classList.toggle('selected');
@@ -3179,7 +3208,7 @@ function showCellTooltip(e,key,memberIds,h){
   const tip=document.createElement('div');
   tip.className='gc-tooltip';
   tip.id='gc-tooltip';
-  const timeStr=`${String(h).padStart(2,'0')}:00 – ${String((h+1)%24).padStart(2,'00')}:00`;
+  const timeStr=`${String(h).padStart(2,'0')}:00 – ${String((h+1)%24).padStart(2,'0')}:00`;
   const names=memberIds.map(id=>{
     const m=STATE.group.members.find(x=>x.id===id);
     if(!m)return'';
@@ -3212,7 +3241,7 @@ window.openCellSheet=function(key,memberIds,h){
   const date=new Date(dateStr+'T12:00:00');
   const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const dateLabel=`${dayNames[date.getDay()]} ${date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
-  const timeStr=`${String(h).padStart(2,'0')}:00 – ${String((h+1)%24).padStart(2,'00')}:00`;
+  const timeStr=`${String(h).padStart(2,'0')}:00 – ${String((h+1)%24).padStart(2,'0')}:00`;
   document.getElementById('cell-sheet-time').textContent=timeStr;
   document.getElementById('cell-sheet-sub').textContent=`${dateLabel} · ${memberIds.length} of ${STATE.group.members.length} free`;
   const membersEl=document.getElementById('cell-sheet-members');
@@ -3276,11 +3305,16 @@ async function toggleVote(key){
   const dateLabel=new Date(dateStr+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
   const timeLabel=`${String(h).padStart(2,'0')}:00`;
 
-  // Auto-lock: check if this slot hits threshold
-  // Require 90% of the WHOLE SQUAD to have voted (not just available members)
+  // Auto-lock: require 90% of members who have ACTUALLY SET AVAILABILITY to vote
+  // (not total squad size — avoids unachievable threshold when some members haven't filled in yet)
   const totalMembers=STATE.group.members.length;
+  const membersWithAvail=STATE.group.members.filter(m=>{
+    const s=m.id===STATE.user.id?STATE.mySchedule:(m.schedule||{});
+    return Object.values(s).some(Boolean);
+  }).length;
+  const quorumBase=Math.max(membersWithAvail,1);
   const voteCount=(votes[key]||[]).length;
-  const minVotesNeeded=Math.ceil(totalMembers*LOCK_THRESHOLD);
+  const minVotesNeeded=Math.max(1,Math.ceil(quorumBase*LOCK_THRESHOLD));
   if(totalMembers>0&&voteCount>=minVotesNeeded){
     const locked={...STATE.lockedSessions,[key]:true};
     STATE.lockedSessions=locked;
@@ -3335,7 +3369,12 @@ async function toggleVoteBlock(keys){
 
   // Auto-lock check: scan all block keys
   const totalMembers=STATE.group.members.length;
-  const minVotesNeeded=Math.ceil(totalMembers*LOCK_THRESHOLD);
+  const membersWithAvail=STATE.group.members.filter(m=>{
+    const s=m.id===STATE.user.id?STATE.mySchedule:(m.schedule||{});
+    return Object.values(s).some(Boolean);
+  }).length;
+  const quorumBase=Math.max(membersWithAvail,1);
+  const minVotesNeeded=Math.max(1,Math.ceil(quorumBase*LOCK_THRESHOLD));
   let locked={...STATE.lockedSessions};
   let anyNewLock=false;
   for(const key of keys){
@@ -3369,12 +3408,14 @@ async function toggleVoteBlock(keys){
   }
 }
 
-async function manualUnlock(key){
+async function manualUnlock(keyOrKeys){
+  // Accept a single key string OR a comma-separated list of keys (for multi-hour blocks)
+  const keys=Array.isArray(keyOrKeys)?keyOrKeys:String(keyOrKeys).split(',');
   const locked={...STATE.lockedSessions};
-  delete locked[key];
+  keys.forEach(k=>{delete locked[k.trim()];});
   STATE.lockedSessions=locked;
   await saveLockedSessions(STATE.group.code,locked);
-  renderOverlapGrid();renderBestTimes();renderLockedSessions();
+  renderOverlapGrid();renderBestTimes();renderLockedSessions();renderVotesTab();
   toast('🔓 Session manually unlocked.');
 }
 window.manualUnlock=manualUnlock;
@@ -3481,7 +3522,7 @@ function renderLockedSessions(){
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="locked-badge">✅ CONFIRMED</span>
-          <button class="locked-unlock" onclick="manualUnlock('${b.keys[0]}');renderLockedSessions();renderVotesTab();">unlock</button>
+          <button class="locked-unlock" onclick="manualUnlock('${b.keys.join(',')}');renderLockedSessions();renderVotesTab();">unlock</button>
         </div>
       </div>
       <a class="btn-gcal-lg" href="${gcalUrl}" target="_blank" rel="noopener" title="Add to Google Calendar">📅 Add to Google Calendar</a>
@@ -3567,7 +3608,7 @@ function renderBestTimes(){
     const dayName=dayNames[date.getDay()];
     const dateLabel=date.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const dur=endH-startH;
-    const timeStr=`${String(startH).padStart(2,'0')}:00 – ${String(endH%24).padStart(2,'00')}:00`;
+    const timeStr=`${String(startH).padStart(2,'0')}:00 – ${String(endH%24).padStart(2,'0')}:00`;
     const durLabel=dur===1?'1 hr':`${dur} hrs`;
 
     // Aggregate votes & locked across all keys in block
@@ -3631,7 +3672,7 @@ function renderBestTimes(){
         <div class="voter-list">${voterNames||'<span class="hint">No votes yet</span>'}</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
           <button class="btn btn-sm ${iVoted?'btn-warn':'btn-outline'}" id="${btnId}">${iVoted?'✓ Remove Vote':'🗳 Vote for This Block'}</button>
-          ${isLocked?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();manualUnlock('${repKey}')">🔓 Unlock</button>`:''}
+          ${isLocked?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();manualUnlock('${keys.join(',')}')">🔓 Unlock</button>`:''}
         </div>
         <a class="btn-gcal-lg" href="${gcalUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📅 Add to Google Calendar</a>
         <div class="free-also">Free: ${freeNames||'—'}</div>`;
@@ -3900,7 +3941,7 @@ function renderVotesTab(){
     const dayName=dayNames[date.getDay()];
     const dateLabel=date.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const dur=b.endH-b.startH;
-    const timeStr=`${String(b.startH).padStart(2,'0')}:00 – ${String(b.endH%24).padStart(2,'00')}:00`;
+    const timeStr=`${String(b.startH).padStart(2,'0')}:00 – ${String(b.endH%24).padStart(2,'0')}:00`;
     const durLabel=dur===1?'1 hr':`${dur} hrs`;
     const iVoted=b.voters.includes(STATE.user.id);
     const votePct=Math.round(b.voters.length/Math.max(total,1)*100);
@@ -4043,10 +4084,6 @@ function renderRoster(){
 }
 
 // ── GLOBAL UI ──────────────────────────────────────────
-window.copyCode=function(){
-  const code=STATE.group?.code;if(!code)return;
-  navigator.clipboard.writeText(code).then(()=>toast('Code copied!')).catch(()=>toast('Code copied!'));
-};
 function getAppUrl(){
   // Return stable base URL (directory, not version-specific filename)
   const path=window.location.pathname;
@@ -4054,16 +4091,6 @@ function getAppUrl(){
   return window.location.origin+dir.replace(/\/$/,'');
 }
 function getJoinUrl(code){return getAppUrl()+'?join='+encodeURIComponent(code);}
-window.copyLink=function(){
-  const code=STATE.group?.code||'';
-  const url=code?getJoinUrl(code):getAppUrl();
-  navigator.clipboard.writeText(url).then(()=>toast('Link copied!')).catch(()=>toast('Link copied!'));
-};
-window.copyBoth=function(){
-  const code=STATE.group?.code||'';
-  const text=`Join my squad on SquadSync!\n🔗 ${getJoinUrl(code)}\n🎮 Squad code: ${code}`;
-  navigator.clipboard.writeText(text).then(()=>toast('Copied! Ready to paste.')).catch(()=>toast('Copied!'));
-};
 // Green flash helper — reusable for any button
 function flashCopied(btn, originalHTML){
   btn.innerHTML='✓ Copied!';
@@ -4162,18 +4189,40 @@ function updateTabBadges(){
       overlapBtn.appendChild(badge);
     }
   }
-  // Locked-in badge — count locked sessions
+  // Locked-in badge — count locked session BLOCKS (not raw hour keys)
   const lockedBtn=document.querySelector('[data-tab="locked-in"]');
   if(lockedBtn&&STATE.lockedSessions){
     const existingL=lockedBtn.querySelector('.tab-badge');
     if(existingL)existingL.remove();
-    const lockedCount=Object.keys(STATE.lockedSessions).filter(k=>STATE.lockedSessions[k]).length;
-    if(lockedCount>0){
+    const lockedKeys=Object.keys(STATE.lockedSessions).filter(k=>STATE.lockedSessions[k]).sort();
+    // Count distinct day-blocks (consecutive hours on same day = 1 session)
+    let blockCount=0;
+    if(lockedKeys.length){
+      const byDay={};
+      lockedKeys.forEach(key=>{
+        const parts=key.split('-');
+        const ds=parts.slice(0,3).join('-');
+        const h=parseInt(parts[3]);
+        if(!byDay[ds])byDay[ds]=[];
+        byDay[ds].push(h);
+      });
+      for(const hours of Object.values(byDay)){
+        hours.sort((a,b)=>a-b);
+        let i=0;
+        while(i<hours.length){
+          blockCount++;
+          let j=i+1;
+          while(j<hours.length&&hours[j]===hours[j-1]+1)j++;
+          i=j;
+        }
+      }
+    }
+    if(blockCount>0){
       const badge=document.createElement('span');
       badge.className='tab-badge';
       badge.style.background='var(--accent3)';
       badge.style.color='#000';
-      badge.textContent=lockedCount;
+      badge.textContent=blockCount;
       lockedBtn.appendChild(badge);
     }
   }
