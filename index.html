@@ -206,7 +206,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 /* Per-tab distinct active colors */
 .tab-btn[data-tab="my-avail"].active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,212,255,0.06);}
 .tab-btn[data-tab="overlap"].active{color:var(--accent3);border-bottom-color:var(--accent3);background:rgba(16,185,129,0.06);}
-.tab-btn[data-tab="votes"].active{color:var(--warn);border-bottom-color:var(--warn);background:rgba(245,158,11,0.06);}
+.tab-btn[data-tab="locked-in"].active{color:var(--accent3);border-bottom-color:var(--accent3);background:rgba(16,185,129,0.06);}
 .tab-btn[data-tab="roster"].active{color:var(--accent2);border-bottom-color:var(--accent2);background:rgba(157,111,255,0.06);}
 .tab-panel{display:none;padding:18px 24px;}
 .tab-panel.active{display:block;}
@@ -707,7 +707,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   .tab-btn.active{border-top-color:var(--accent);border-bottom-color:transparent;}
   .tab-btn[data-tab="my-avail"].active{border-top-color:var(--accent);}
   .tab-btn[data-tab="overlap"].active{border-top-color:var(--accent3);color:var(--accent3);}
-  .tab-btn[data-tab="votes"].active{border-top-color:var(--warn);color:var(--warn);}
+  .tab-btn[data-tab="locked-in"].active{border-top-color:var(--accent3);color:var(--accent3);}
   .tab-btn[data-tab="roster"].active{border-top-color:var(--accent2);color:var(--accent2);}
   .tab-icon{display:block !important;}
   .tab-btn::before{font-size:16px;line-height:1;} /* tab icons via attr below */
@@ -1140,7 +1140,7 @@ p.hint{font-size:11px;color:var(--text2);}
   <div class="tabs">
     <button class="tab-btn active" data-tab="my-avail" onclick="switchTab('my-avail')" aria-label="My Availability"><span class="tab-icon">📅</span><span class="tab-label">My Avail</span></button>
     <button class="tab-btn" data-tab="overlap" onclick="switchTab('overlap')" aria-label="Squad Overlap"><span class="tab-icon">👥</span><span class="tab-label">Overlap</span></button>
-    <button class="tab-btn" data-tab="votes" onclick="switchTab('votes')" id="tab-btn-votes" aria-label="Votes"><span class="tab-icon">🗳</span><span class="tab-label">Votes</span></button>
+    <button class="tab-btn" data-tab="locked-in" onclick="switchTab('locked-in')" id="tab-btn-votes" aria-label="Locked In"><span class="tab-icon">🔒</span><span class="tab-label">Locked In</span></button>
     <button class="tab-btn" data-tab="roster" onclick="switchTab('roster')" aria-label="Squad Members"><span class="tab-icon">🎮</span><span class="tab-label">Squad</span></button>
   </div>
 
@@ -1308,10 +1308,12 @@ p.hint{font-size:11px;color:var(--text2);}
           <div class="grid-header" id="overlap-grid-header"></div>
           <div class="grid-scroll"><div class="weekly-grid" id="overlap-grid"></div></div>
         </div>
-        <div id="locked-sessions-section" style="display:none;margin-bottom:20px;">
-          <div class="sec-title" style="color:var(--accent3)">🔒 Locked Sessions</div>
-          <p class="hint" style="margin-bottom:12px">These times are confirmed — the whole squad is playing.</p>
-          <div id="locked-sessions-list"></div>
+        <!-- Locked sessions moved to Locked In tab -->
+        <div id="locked-sessions-cta" style="display:none;margin-bottom:16px;">
+          <div class="overlap-cta" onclick="switchTab('locked-in')" style="cursor:pointer">
+            <div class="overlap-cta-text"><strong>🔒 Sessions Locked In!</strong>View your confirmed gaming sessions</div>
+            <div class="overlap-cta-arrow">→</div>
+          </div>
         </div>
 
 
@@ -1357,32 +1359,35 @@ p.hint{font-size:11px;color:var(--text2);}
     </div><!-- /tab-inner -->
   </div>
 
-  <!-- VOTES TAB -->
-  <div class="tab-panel" id="tab-votes">
+  <!-- LOCKED IN TAB -->
+  <div class="tab-panel" id="tab-locked-in">
     <div class="tab-inner">
       <div class="votes-layout">
-        <!-- LEFT: Voted slots -->
+        <!-- LEFT: Locked & pending sessions -->
         <div class="votes-main">
           <div class="votes-header">
-            <div class="sec-title" style="margin-bottom:0">Voted Times</div>
-            <div class="votes-header-hint">Slots your squad has voted on. Lock in at 90%.</div>
+            <div class="sec-title" style="margin-bottom:0">🔒 Locked In Sessions</div>
+            <div class="votes-header-hint">Confirmed game times + pending votes. Go to Overlap to vote on new times.</div>
           </div>
-          <div id="votes-locked-section" style="display:none">
-            <div class="votes-section-label votes-section-locked">🔒 Locked In</div>
-            <div id="votes-locked-list"></div>
+          <!-- LOCKED SESSIONS (full card with gcal) -->
+          <div id="locked-sessions-section" style="display:none">
+            <div class="votes-section-label votes-section-locked">🔒 Confirmed — Game On!</div>
+            <div id="locked-sessions-list"></div>
           </div>
+          <!-- PENDING VOTES -->
           <div id="votes-pending-section" style="display:none">
             <div class="votes-section-label votes-section-pending">🗳 Pending Votes</div>
             <div id="votes-pending-list"></div>
           </div>
+          <!-- EMPTY STATE -->
           <div id="votes-empty" class="votes-empty">
-            <div class="votes-empty-icon">🗳</div>
-            <div class="votes-empty-title">No votes yet</div>
-            <div class="votes-empty-sub">Head to Squad Overlap, find a green block, and vote for times that work for you.</div>
+            <div class="votes-empty-icon">🔒</div>
+            <div class="votes-empty-title">Nothing Locked In Yet</div>
+            <div class="votes-empty-sub">Head to Squad Overlap, find a colored time block, and vote. When 90%+ of the squad agrees, the session locks in automatically.</div>
             <button class="btn btn-outline btn-sm" style="margin-top:14px" onclick="switchTab('overlap')">Go to Squad Overlap →</button>
           </div>
         </div>
-        <!-- RIGHT: My vote summary -->
+        <!-- RIGHT: My votes + squad progress -->
         <div class="votes-sidebar">
           <div class="votes-sidebar-card">
             <div class="votes-sidebar-title">My Votes</div>
@@ -2833,8 +2838,20 @@ function renderOverlapGrid(){
         });
         cell.addEventListener('mouseenter',e=>showCellTooltip(e,key,counts[key]||[],h));
         cell.addEventListener('mouseleave',hideCellTooltip);
-        // Touch: tap opens bottom sheet instead
+        // Touch: tap opens bottom sheet — but only if user didn't scroll
+        let _touchStartY=0,_touchStartX=0,_touchMoved=false;
+        cell.addEventListener('touchstart',e=>{
+          _touchStartY=e.touches[0].clientY;
+          _touchStartX=e.touches[0].clientX;
+          _touchMoved=false;
+        },{passive:true});
+        cell.addEventListener('touchmove',e=>{
+          const dy=Math.abs(e.touches[0].clientY-_touchStartY);
+          const dx=Math.abs(e.touches[0].clientX-_touchStartX);
+          if(dy>8||dx>8)_touchMoved=true;
+        },{passive:true});
         cell.addEventListener('touchend',e=>{
+          if(_touchMoved)return; // user was scrolling, don't open sheet
           e.preventDefault();
           openCellSheet(key,counts[key]||[],h);
         },{passive:false});
@@ -3067,11 +3084,18 @@ function buildGCalUrl(dateStr, startH, endH, title, description){
 }
 
 function renderLockedSessions(){
+  // Locked sessions now live in the Locked In tab, not the overlap tab
+  // But we show a CTA banner in overlap when sessions exist
+  const cta=document.getElementById('locked-sessions-cta');
   const section=document.getElementById('locked-sessions-section');
   const list=document.getElementById('locked-sessions-list');
-  if(!section||!list)return;
   const locked=STATE.lockedSessions||{};
   const keys=Object.keys(locked).filter(k=>locked[k]);
+
+  // Show/hide overlap CTA
+  if(cta)cta.style.display=keys.length?'block':'none';
+
+  if(!section||!list)return;
   if(!keys.length){section.style.display='none';return;}
   section.style.display='block';
   keys.sort();
@@ -3110,7 +3134,6 @@ function renderLockedSessions(){
     const time=`${String(b.startH).padStart(2,'0')}:00 – ${String(b.endH%24).padStart(2,'0')}:00`;
     const dur=b.endH-b.startH;
     const durLabel=dur===1?'1 hr':`${dur} hrs`;
-    // Aggregate vote count across all keys in block
     const allVoters=new Set();
     b.keys.forEach(k=>(STATE.votes[k]||[]).forEach(id=>allVoters.add(id)));
     const voteCount=allVoters.size;
@@ -3133,7 +3156,7 @@ function renderLockedSessions(){
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="locked-badge">LOCKED IN</span>
-          <button class="locked-unlock" onclick="manualUnlock('${b.keys[0]}')">unlock</button>
+          <button class="locked-unlock" onclick="manualUnlock('${b.keys[0]}');renderLockedSessions();renderVotesTab();">unlock</button>
         </div>
       </div>
       <a class="btn-gcal-lg" href="${gcalUrl}" target="_blank" rel="noopener" title="Add to Google Calendar">📅 Add to Google Calendar</a>
@@ -3482,18 +3505,26 @@ function renderVotesTab(){
   const total=STATE.group.members.length;
   const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-  // Build grouped blocks from votes (same grouping logic as best times)
+  // First always render locked sessions (top priority in the tab)
+  renderLockedSessions();
+
+  // Build grouped blocks from votes (pending = not locked)
   const votedKeys=Object.keys(STATE.votes).filter(k=>(STATE.votes[k]||[]).length>0);
-  if(!votedKeys.length){
-    document.getElementById('votes-empty').style.display='flex';
-    document.getElementById('votes-locked-section').style.display='none';
-    document.getElementById('votes-pending-section').style.display='none';
+  const pendingSec=document.getElementById('votes-pending-section');
+  const pendingList=document.getElementById('votes-pending-list');
+  const emptyEl=document.getElementById('votes-empty');
+
+  const lockedKeys=Object.keys(STATE.lockedSessions||{}).filter(k=>STATE.lockedSessions[k]);
+  const hasLocked=lockedKeys.length>0;
+
+  if(!votedKeys.length&&!hasLocked){
+    if(emptyEl)emptyEl.style.display='flex';
+    if(pendingSec)pendingSec.style.display='none';
     renderMyVotesSummary();renderSquadProgress();
     return;
   }
-  document.getElementById('votes-empty').style.display='none';
+  if(emptyEl)emptyEl.style.display='none';
 
-  // Sort keys by date then hour
   votedKeys.sort();
 
   // Group consecutive voted keys by date
@@ -3518,7 +3549,6 @@ function renderVotesTab(){
         b.keys.push(slots[j].key);
         j++;
       }
-      // Aggregate voters across all keys
       const allVoters=new Set();
       b.keys.forEach(k=>(STATE.votes[k]||[]).forEach(id=>allVoters.add(id)));
       b.voters=[...allVoters];
@@ -3528,13 +3558,17 @@ function renderVotesTab(){
     }
   }
 
-  const locked=blocks.filter(b=>b.isLocked);
+  // Only show pending (non-locked) blocks here — locked ones are in renderLockedSessions
   const pending=blocks.filter(b=>!b.isLocked);
 
-  const lockedSec=document.getElementById('votes-locked-section');
-  const pendingSec=document.getElementById('votes-pending-section');
-  const lockedList=document.getElementById('votes-locked-list');
-  const pendingList=document.getElementById('votes-pending-list');
+  if(pendingSec)pendingSec.style.display=pending.length?'block':'none';
+  if(pendingList){
+    pendingList.innerHTML='';
+    pending.forEach(b=>pendingList.appendChild(buildVoteCard(b)));
+  }
+
+  renderMyVotesSummary();
+  renderSquadProgress();
 
   function buildVoteCard(b){
     const date=new Date(b.dateStr+'T12:00:00');
@@ -3545,25 +3579,16 @@ function renderVotesTab(){
     const durLabel=dur===1?'1 hr':`${dur} hrs`;
     const iVoted=b.voters.includes(STATE.user.id);
     const votePct=Math.round(b.voters.length/Math.max(total,1)*100);
-    const barColor=b.isLocked?'var(--accent3)':votePct>=66?'var(--warn)':'var(--accent2)';
+    const barColor=votePct>=66?'var(--warn)':'var(--accent2)';
     const voterHtml=b.voters.map(vid=>{
       const m=STATE.group.members.find(x=>x.id===vid);
       if(!m)return'';
       return`<div class="vote-card-voter"><div class="avatar" style="background:${avatarColor(m.name)};width:20px;height:20px;font-size:10px">${m.name[0].toUpperCase()}</div><span>${esc(m.name)}</span></div>`;
     }).join('');
     const card=document.createElement('div');
-    card.className=`vote-card${b.isLocked?' is-locked':iVoted?' i-voted':''}`;
+    card.className=`vote-card${iVoted?' i-voted':''}`;
     const repKey=b.keys[0];
     const btnId=`vcb-${repKey.replace(/[^a-z0-9]/gi,'_')}`;
-    // Google Calendar link for locked sessions
-    let gcalHtml='';
-    if(b.isLocked){
-      const gameName=STATE.group?.name||'Gaming Session';
-      const gcalTitle=`🎮 ${gameName}`;
-      const gcalDesc=`SquadSync session — ${b.voters.length} member${b.voters.length!==1?'s':''} locked in`;
-      const gcalUrl=buildGCalUrl(b.dateStr,b.startH,b.endH,gcalTitle,gcalDesc);
-      gcalHtml=`<a class="btn-gcal-lg" href="${gcalUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📅 Add to Calendar</a>`;
-    }
     card.innerHTML=`
       <div class="vote-card-top">
         <div class="vote-card-date">
@@ -3574,9 +3599,6 @@ function renderVotesTab(){
           <div class="vote-card-time">${esc(timeStr)}</div>
           <div class="vote-card-dur">${esc(durLabel)}</div>
         </div>
-        <div class="vote-card-badges">
-          ${b.isLocked?'<div class="vote-locked-badge">LOCKED</div>':''}
-        </div>
       </div>
       <div class="vote-card-progress">
         <div class="vote-progress-bar-wrap"><div class="vote-progress-bar" style="width:${votePct}%;background:${barColor}"></div></div>
@@ -3585,8 +3607,6 @@ function renderVotesTab(){
       <div class="vote-card-voters">${voterHtml}</div>
       <div class="vote-card-actions">
         <button class="btn btn-sm ${iVoted?'btn-warn':'btn-outline'}" id="${btnId}">${iVoted?'✓ Remove My Vote':'🗳 Vote for This'}</button>
-        ${gcalHtml}
-        ${b.isLocked?`<button class="btn btn-ghost btn-sm" onclick="manualUnlock('${repKey}');renderVotesTab()">🔓 Unlock</button>`:''}
       </div>`;
     card.querySelector(`#${btnId}`).addEventListener('click',async e=>{
       e.stopPropagation();
@@ -3595,17 +3615,6 @@ function renderVotesTab(){
     });
     return card;
   }
-
-  lockedSec.style.display=locked.length?'block':'none';
-  lockedList.innerHTML='';
-  locked.forEach(b=>lockedList.appendChild(buildVoteCard(b)));
-
-  pendingSec.style.display=pending.length?'block':'none';
-  pendingList.innerHTML='';
-  pending.forEach(b=>pendingList.appendChild(buildVoteCard(b)));
-
-  renderMyVotesSummary();
-  renderSquadProgress();
 }
 
 function renderMyVotesSummary(){
@@ -3748,7 +3757,7 @@ window.switchTab=function(id,scrollTo){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===`tab-${id}`));
   if(id==='roster')renderRoster();
-  if(id==='votes'){renderVotesTab();}
+  if(id==='locked-in'){renderVotesTab();}
   if(id==='overlap'){
     // Sync overlap week to whichever week is currently open in the editor
     if(STATE.currentWeekStart){
@@ -3782,19 +3791,19 @@ function updateTabBadges(){
       overlapBtn.appendChild(badge);
     }
   }
-  // Votes badge — count slots with any votes
-  const votesBtn=document.querySelector('[data-tab="votes"]');
-  if(votesBtn&&STATE.votes){
-    const existingV=votesBtn.querySelector('.tab-badge');
-    if(existingV)existingV.remove();
-    const votedCount=Object.keys(STATE.votes).filter(k=>(STATE.votes[k]||[]).length>0).length;
-    if(votedCount>0){
+  // Locked-in badge — count locked sessions
+  const lockedBtn=document.querySelector('[data-tab="locked-in"]');
+  if(lockedBtn&&STATE.lockedSessions){
+    const existingL=lockedBtn.querySelector('.tab-badge');
+    if(existingL)existingL.remove();
+    const lockedCount=Object.keys(STATE.lockedSessions).filter(k=>STATE.lockedSessions[k]).length;
+    if(lockedCount>0){
       const badge=document.createElement('span');
       badge.className='tab-badge';
-      badge.style.background='var(--warn)';
+      badge.style.background='var(--accent3)';
       badge.style.color='#000';
-      badge.textContent=votedCount;
-      votesBtn.appendChild(badge);
+      badge.textContent=lockedCount;
+      lockedBtn.appendChild(badge);
     }
   }
 }
