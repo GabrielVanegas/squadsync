@@ -189,8 +189,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .tabs{background:var(--panel);border-bottom:1px solid var(--border);display:flex;padding:0 20px;overflow-x:auto;}
 .tab-btn{font-family:var(--font-display);font-size:15px;letter-spacing:2.5px;text-transform:uppercase;padding:14px 20px;cursor:pointer;color:var(--text2);background:none;border:none;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;position:relative;display:flex;align-items:center;gap:6px;}
 .tab-icon{display:inline-flex;align-items:center;font-size:18px;line-height:1;}
-.tab-label{} /* visible on all sizes */
-.tab-badge{position:absolute;top:10px;right:6px;background:var(--accent3);color:#000;font-family:var(--font-hud);font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center;line-height:1.5;}
+.tab-label{}
+/* Badge sits inline after the label, not absolute-positioned over text */
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--accent3);color:#000;font-family:var(--font-hud);font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;line-height:1.5;margin-left:4px;}
 
 /* ── SEE OVERLAP CTA ─────────────────────────────────── */
 .overlap-cta{display:flex;align-items:center;justify-content:space-between;gap:14px;
@@ -704,6 +705,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     border-top:2px solid transparent;
     flex-direction:column;align-items:center;gap:3px;
   }
+  /* On mobile, wrap icon+badge in a row so badge sits top-right of icon */
+  .tab-icon{position:relative;}
+  .tab-badge{margin-left:0;position:absolute;top:-4px;right:-8px;font-size:8px;padding:0 4px;}
   .tab-btn.active{border-top-color:var(--accent);border-bottom-color:transparent;}
   .tab-btn[data-tab="my-avail"].active{border-top-color:var(--accent);}
   .tab-btn[data-tab="overlap"].active{border-top-color:var(--accent3);color:var(--accent3);}
@@ -727,6 +731,57 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   :root{--cell-h:36px;}
   .tab-panel{padding:14px 14px;padding-bottom:calc(70px + env(safe-area-inset-bottom));}
 }
+
+/* ── GRID ZOOM LEVELS ──────────────────────────────────── */
+/* Compact mode — 4 day-part rows */
+.grid-wrap.zoom-compact .weekly-grid,
+.grid-wrap.zoom-compact .grid-header{grid-template-columns:52px repeat(7,1fr);}
+.grid-wrap.zoom-compact .gc{height:56px;flex-direction:column;gap:3px;padding:2px;}
+.grid-wrap.zoom-compact .gc-daypart-label{
+  font-family:var(--font-hud);font-size:8px;letter-spacing:0.5px;text-transform:uppercase;
+  color:var(--text3);pointer-events:none;line-height:1;
+}
+.grid-wrap.zoom-compact .gc.avail .gc-daypart-label{color:rgba(180,160,255,0.8);}
+.grid-wrap.zoom-compact .gc-fill-bar{
+  width:100%;height:3px;background:var(--border);border-radius:2px;overflow:hidden;
+  pointer-events:none;margin-top:2px;
+}
+.grid-wrap.zoom-compact .gc-fill-inner{height:100%;border-radius:2px;transition:width 0.2s;}
+.grid-wrap.zoom-compact .gc-count-lbl{
+  font-family:var(--font-display);font-size:14px;letter-spacing:0.5px;
+  color:inherit;pointer-events:none;line-height:1;
+}
+.grid-wrap.zoom-compact .gt{
+  height:56px;font-size:8px;line-height:1.3;text-align:right;padding-right:4px;
+  white-space:pre-line;justify-content:center;
+}
+/* Compact header keeps same height */
+.grid-wrap.zoom-compact .gh{padding:6px 2px;}
+
+/* Expanded mode — bigger cells */
+.grid-wrap.zoom-expanded{--cell-h:44px;}
+.grid-wrap.zoom-expanded .gc-time{opacity:1;font-size:10px;}
+.grid-wrap.zoom-expanded .gt{font-size:10px;}
+
+/* Zoom controls bar — mobile only */
+.zoom-bar{
+  display:none;
+  align-items:center;gap:6px;padding:4px 0 10px;
+}
+@media(max-width:640px){.zoom-bar{display:flex;}}
+.zoom-btn{
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text3);font-family:var(--font-hud);font-size:10px;letter-spacing:0.5px;
+  padding:6px 0;border-radius:var(--r-sm);cursor:pointer;transition:all 0.15s;flex:1;
+}
+.zoom-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.08);}
+.zoom-btn:active{transform:scale(0.96);}
+.zoom-label{font-family:var(--font-hud);font-size:9px;color:var(--text3);white-space:nowrap;letter-spacing:0.3px;}
+
+/* Pinch-zoom visual feedback flash */
+@keyframes zoomFlash{0%{opacity:0.6}100%{opacity:1}}
+.grid-wrap.zoom-flash{animation:zoomFlash 0.25s ease-out;}
 
 /* Night hours hidden state */
 .gc.hidden,.gt.hidden{display:none !important;}
@@ -1178,7 +1233,7 @@ p.hint{font-size:11px;color:var(--text2);}
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="my-avail" onclick="switchTab('my-avail')" aria-label="My Availability"><span class="tab-icon">📅</span><span class="tab-label">My Avail</span></button>
-    <button class="tab-btn" data-tab="overlap" onclick="switchTab('overlap')" aria-label="Squad Overlap"><span class="tab-icon" style="display:flex;align-items:center;justify-content:center;"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABOAHYDASIAAhEBAxEB/8QAHAAAAQQDAQAAAAAAAAAAAAAAAAUGBwgCAwQB/8QAPRAAAQMDAgUCAwYDBQkAAAAAAQIDBAAFEQYhBxITMUEUUSJhcQgVFjKBoReRwSRCYpPRGCNSVmRykrHh/8QAGgEAAgMBAQAAAAAAAAAAAAAAAwQABQYCAf/EACwRAAEDAgUCBgIDAQAAAAAAAAEAAgMEERIhMUFRBZETIjJhcYGxwRSh8FL/2gAMAwEAAhEDEQA/AKz0UV6nGd89vFRReUVukRX46W1uIHK6gLQpKgoEH5jz8u9YvBrmBZ5+XlGeb/ixv+ma8BuovZUd2M703kgKwCCCCCD5BGxrUNzUq6D0ojiHw0uECArn1JYFl+K15fiqGVNgDuQvJH/djzTI01pi6Xm7tQWIzqVmS0wsqQfgK18o/fxSzKphxBxsW6/ruuyw5W3SVdIMi3TnIcpPK63jmH1AI/Y1hGjPSA6WkghlsuLJUBhI+v17VMf2m+H1wsevTLjMl2NNYZKOXwUIQ2c/MqGf1/lw8QtGs6B4R2iPPYR9/X+T6h7nRhbDLadmxvtuoE+/bxS8XUWSRxEep+VvffsujEQTwFElFdL/AKEQGAyJHq+ZXWKiOnjblCR3z3zmu9Gnrk1ZGr9NiuMWtxzptuqISXVDuEAnJ+oGBT5ka3XJDsUj0Vk6UKdWptHIgqJSnOcD2z5pQs9hvd4J+6rTNmhPcssqUB9SBiuiQBcrlzg0XJSbRTn/AIfa1xn8M3L/ACTWLmgtZtpKlaZumBvtHUT+1c+KzkIfjx/9Dum1RW2VGkRH1MSmHWHU7KQ4gpUPqDRXaKtVFFepIBOU82x81FE4NB6gVYbserCiXCFKT0pUWUkFtxGc+ccpBAIIIqZZPBmHqO3R9Y8K5sSdF+F120TFc4Q4PzIyfzb52Vj61CemI+m5PqG79cJ0BZT/AGd1lgOt83+MZBA+Yz9Ks/8AZm0NcbJJN501rCy3m0vqSJKGkLSsY8bjIO/Y/KqPqcnhOxxkh3FjZ36vxvsmYhiFjp+Fv+y9wu1DY9VTdXXuEi0B5pbIgjxlQzt/dTlO36VLVyiaA0bKN4nLiQ3JkvIPJzlx5W+AEgnOQT9d6jH7SPF+ZbZknQWlC+1cw3/bpiUqBaSUcyUtqT2UcjJ8A++4hSHapNgtbkyakOXdC+qHmXCZKQdgpJPnCiDt5NV9SIwcUou82t+voK0ounyTi4yaritT9Ea1nOxEPR5smHyrWhxtSVIGQQcKAzuB2+VNvipwxtWpb7H1NPiuXH7uilMeCMci1bkZHnfFV94JW+bqu9SbrfrzMmLgpUhiNIdUHWFKIwpYGNikeamKFxLuOhFxIWqfSS7G5LEdE5p9xx5kK3SXAQcgfF2OwApfFFLKYfS87jLPhSoojEzG03A2PCiaHwpsWh7PJ1xxQWFuKkkw7UhXwOKJOAsjJIzvgdgN/aoi4iXLUWoZiNQXSPJbtzpLUAqa6bKWx2S2BsBj2q6vGnhjF4lRGJC7ijlZaJhpJIaSVY+MlO6tu31qlfE+yw9OX5VjZv7t5kQyW3nAkhpsjHwIySTjcHtjGKtaB5dORKbvz2yDfa2l/f4VXIPLlolTgnohrVt7dk3EK+7YPKp1I26qj2Rn22JP/wBqzEdqFa7d02W2IkSO2ThICENpA/kABUXfZodZGiJiElPVE9RX745EY/rXPx71Ww1NtmjZS50a2zwH7rKjsFavTgnDSMeVFJBPgY75Io1RimnLNgshWmSpqjHsFJmmNT2LU8R2TYbk1PZZc6bi2wQEqxnG4Hg0lniNof76+5vxNAM7qdLp85xz5xy82OXOdu9RRwt1BbfuXiTC0y29Ge5ps63NIYKOm2G8IwMbKBx8Pek9MK2/7MqVuW2F6VUFUgzcJ6vrPUFIGe5PZP0yOwxXP8ZocQb6gd0L+EwPIdfUAfanjUWmbBqENC8WxiWWjlClDCh8sjfHyorXox953RtjdlE+oXbY6ns9+ctJ5s/rmil8T25AlKeLLH5WuOXuqdVtitIeeDa5DUdJH53ObA/8QT+1aqK0RW2Ty0FpfT94vrMa8aut0GKVfGcOBRGPBUjl/mauZwa0zorSNnnTtJTUzWykqkrbmdYEpGdgDgH+hFUW07boM2Rz3S7M22GggOOFJccOx2Qgbk7ecD51ZDhfxX4XaItibBZGdQTxMXl5a2ApSlnY7c3n5Cs31ZsomY5pe4A5gDyj3JFs/bNOQ4S0jIKLIM+bcNaX/UMyEWot7kuS4zinQVtBaipCSBnwQnbtWrUDz7hkrvtljRTHQC3c2i4SkBQxhJz7Ck3ihpa56a1q9p+M76uLJQlcBCVc6xHUSpCVjGQoZwQR4z2qT9K8J7a1aYkvWE158HduK+8oNE8vkeO4xvtS1XgitPI71aAa27/nJaakqQ9ngxtNm888aLl+zbIdkX2+6meQtcd1hEFLji+UvLBSfy9/ykUt8YFQpGgby4FFxSHU9Jajj4tzsPO3/qmvqrUsTTsgsQrchLDKigpZdCEpONsYznHuPlUaouN/1jfmrPHlPueukBDLLrxUlJOw77DYnegU1DJVVAqPS1tj2XtdPHSRuY43c5XR4beo1b9n6xOXa6yIT7sLp+qZd6a0hCilJz74SPrvVS+I2i7VbLw8v+I1oujjiiorWXnHCPGSlKgTj51ZHWusNI8L9F2Th/fIlxuEVdsCS/HHwKKTuObIPfJ27DFVW1uzoaQ6qbpOfc2eb4lQ57AyCe4StJOf1AqxpMTqt0jLhrtwLg/edu32su+wYAdV1cK9Xo0fqB5t9zrW2VhDy2wdiPyrAODtk7exqxVuu8WbFRKhSW32FjKVtqyDVQHW3Gl8jram1AA8qhg77ium23W52xRVb58mKT36TpTn+VXE1KJTiBzVHWdObO7GDYq1NitVussm5yIIcC7nMXMk8y8guK749h8qa/8AC7RH3h6kwpHp+t1/Q+pX6Xn756ecfp28YqEPxnqv/mG4/wCeqsXNX6pWkpVqC5EH/qFf60IUkgOTkq3ps7SSH6/KspqLWFh06ltNznNsKXshtIyrHvyjsPnRVUn3XX3VOvOLccUcqUtWST9aK7FAy2ZRG9Hit5ibrCnRwsMMa2iG4QmZsXkd6jDoylY6aqa9L2gJxt2qY0wf3Eufugj+tGqwTA+2tj+FoKIA1EYdpcflSRrLh5p69Rnbpox0QpKSSq3POZSs+yD4+h/aozsNiv10feh2q2vPu84bWpKfyHPbPYdv2qVdRw5F1jOXLTk8Lc5MOx2yQXT7g+FYNSHwYuendNWVoXG1uW66yvilc4KispUoBXfbb2FZmHqs0MJDjiO19R88rS1nRY3SYowQN7b/AAkXgrodOk5Tlw1XBKrocCL1DzEgpHwjfbB80q8UNRl11duaUHACVLU0c9MAj4MeSD5pva24jM3KaJsdLjjiHnGmIzQ3JJKUKJxjtioq1bOMdqQxMcZfnPrClhpWUtDB2yMb5pNkEtXPjk1P+7KwYyGiiDjsP99pP1jclyriYiEdFKVAKHNnmO/fP1BpxWHQSbxZUuwpKI9ySrZIXnffbI7Z2IqNXM4CsqwCCR7jzTz0LqgWZKfTtKacI+JaG0nqJ/xZ74zV/UwywRNbAbEf2qWmmirJXumGv9Llv0bVbMhOn7lMkvIC8NtOP8zeRtkZOBUh6Ws2mNKxGpC4ybveiPiU4P8AdNK9kg+x89/pXLqy5269sOh5oOOJRzc2RgDGcZBpm2e7SoMdxyfNacbTnpJSv4iaTfLLVQhvp5AyumoqCCllxO83F9kn8QXHX9Vy5Dx+N0pUR7fCNqQK6LjIVKlrfUSSvfc71z1ooG4Imt4AWYqXB0ziOSiiiiioCKKKKiiK2R3lsOhxs4UOxrXRXhAIsV6CWm4TltuqH4akLYeejuDOSk5TnHtXb+LnZcgm6SpEhrlIAbc6agc+4H1pm0Ui/p0DjeytI+s1TBa909H9XMwLeY2nmfSqcUS4p09U7jGQT5/0poyZDkh5TrqytajkqPc1poosFHFBctGZ33QKrqE1VYPOXA0XpOTmsmS2lRUtJJ5cDBxisKKYc0OFilGSOYbhdCZboSR1l4Ixjm8e1aFkKxnJxXlFcNhY3ZGfVSv1KKKKKKlkUUUVFEUUUVFF/9k=" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-bottom:1px;" alt="dap"></span><span class="tab-label">Overlap</span></button>
+    <button class="tab-btn" data-tab="overlap" onclick="switchTab('overlap')" aria-label="Squad Overlap"><span class="tab-icon" style="display:flex;align-items:center;justify-content:center;"><img src="data:image/jpeg;base64,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" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle;" alt="dap"></span><span class="tab-label">Overlap</span></button>
     <button class="tab-btn" data-tab="locked-in" onclick="switchTab('locked-in')" id="tab-btn-votes" aria-label="Locked In"><span class="tab-icon">✅</span><span class="tab-label">Locked In</span></button>
     <button class="tab-btn" data-tab="roster" onclick="switchTab('roster')" aria-label="Squad Members"><span class="tab-icon">🎮</span><span class="tab-label">Squad</span></button>
   </div>
@@ -1255,7 +1310,13 @@ p.hint{font-size:11px;color:var(--text2);}
               </div>
             </div>
           </div>
-          <div class="grid-wrap">
+          <div class="grid-wrap" id="my-grid-wrap">
+            <!-- Zoom bar — mobile only -->
+            <div class="zoom-bar" id="avail-zoom-bar">
+              <button class="zoom-btn" id="avail-zoom-0" onclick="setGridZoom(0)" title="Day-part view">🗓 Day Parts</button>
+              <button class="zoom-btn" id="avail-zoom-1" onclick="setGridZoom(1)" title="Hourly view">≡ Hours</button>
+              <button class="zoom-btn" id="avail-zoom-2" onclick="setGridZoom(2)" title="Expanded view">🔍 Zoom In</button>
+            </div>
             <div class="grid-header" id="my-grid-header"></div>
             <div class="grid-scroll"><div class="weekly-grid" id="my-grid"></div></div>
           </div>
@@ -1343,7 +1404,13 @@ p.hint{font-size:11px;color:var(--text2);}
             <button class="btn btn-ghost btn-sm" onclick="overlapWeekNav(1)">Next →</button>
           </div>
         </div>
-        <div class="grid-wrap">
+        <div class="grid-wrap" id="overlap-grid-wrap">
+          <!-- Zoom bar — mobile only -->
+          <div class="zoom-bar" id="overlap-zoom-bar">
+            <button class="zoom-btn" id="overlap-zoom-0" onclick="setGridZoom(0)" title="Day-part view">🗓 Day Parts</button>
+            <button class="zoom-btn" id="overlap-zoom-1" onclick="setGridZoom(1)" title="Hourly view">≡ Hours</button>
+            <button class="zoom-btn" id="overlap-zoom-2" onclick="setGridZoom(2)" title="Expanded view">🔍 Zoom In</button>
+          </div>
           <div class="grid-header" id="overlap-grid-header"></div>
           <div class="grid-scroll"><div class="weekly-grid" id="overlap-grid"></div></div>
         </div>
@@ -1689,6 +1756,7 @@ let STATE = {
   gameRecs:null,
   activityLog:[],
   overlayMembers:new Set(),
+  gridZoom: parseInt(localStorage.getItem('ss_grid_zoom')||'1',10), // 0=compact,1=normal,2=expanded
   _touchStartX:null,_touchStartY:null,_touchIntent:null,_touchKey:null,_touchMoved:false,
   _longPressTimer:null,_selectionMode:false,_selectionToast:null,
 };
@@ -2176,6 +2244,7 @@ function initApp(){
   renderOverlapGrid();renderBestTimes();renderRoster();renderLockedSessions();
   renderNudgeBanner();renderActivityFeed();renderQuickStats();renderVotesTab();
   checkAndShowDuplicateBanner();updateTabBadges();
+  applyZoomClass();updateZoomButtons();
   // Load game recs once
   if(!STATE.gameRecs)fetchGameRecs();
   // Auto-cleanup past slots daily
@@ -2484,6 +2553,14 @@ function renderMyGrid(){
   const today=toDateStr(new Date());
   const nowH=new Date().getHours();
 
+  // Apply zoom class and update buttons
+  applyZoomClass();
+  updateZoomButtons();
+
+  // Attach pinch-zoom to the grid wrapper (once per element)
+  const scrollEl=document.getElementById('my-grid-wrap');
+  if(scrollEl)attachPinchZoom(scrollEl);
+
   // ── Sticky header row ──────────────────────────────
   headerEl.innerHTML='';
   const corner=document.createElement('div');corner.className='gh';corner.style.background='var(--bg)';headerEl.appendChild(corner);
@@ -2512,6 +2589,15 @@ function renderMyGrid(){
   const nightCollapsed=localStorage.getItem('ss_night_collapsed')==='1';
   const NIGHT_END=6; // hours 0-5 are "night"
 
+  // COMPACT MODE — render 4 day-part rows instead of 24
+  if(STATE.gridZoom===0){
+    renderCompactMyGrid(dates,today,nowH,headerEl,grid);
+    // Still show night toggle and quickmark bar — fall through to that code
+    const existingNightToggle=document.getElementById('night-toggle-btn');
+    if(existingNightToggle)existingNightToggle.remove();
+  }
+
+  if(STATE.gridZoom!==0){
   // Night hours toggle button — inserted as first element in the grid parent
   const existingNightToggle=document.getElementById('night-toggle-btn');
   if(existingNightToggle)existingNightToggle.remove();
@@ -2871,6 +2957,7 @@ function renderMyGrid(){
     grid.parentElement.style.position='relative';
     grid.parentElement.appendChild(hint);
   }
+  } // end if(STATE.gridZoom!==0)
 }
 
 // ── DRAG ──────────────────────────────────────────────
@@ -2953,6 +3040,232 @@ function toggleMyCell(key){
   },1500);
   clearTimeout(window._overlapTimer);
   window._overlapTimer=setTimeout(()=>{renderOverlapGrid();renderBestTimes();},400);
+}
+
+// ── GRID ZOOM SYSTEM ───────────────────────────────────
+// Day-part definitions: each part = {label, emoji, hours[]}
+const DAY_PARTS=[
+  {label:'Night',  emoji:'🌙', hours:[0,1,2,3,4,5]},
+  {label:'Morning',emoji:'☀️', hours:[6,7,8,9,10,11]},
+  {label:'Afternoon',emoji:'🌤',hours:[12,13,14,15,16,17]},
+  {label:'Evening',emoji:'🌆', hours:[18,19,20,21,22,23]},
+];
+
+function setGridZoom(level){
+  STATE.gridZoom=level;
+  localStorage.setItem('ss_grid_zoom',level);
+  applyZoomClass();
+  updateZoomButtons();
+  // Re-render both grids in new mode
+  if(STATE.currentWeekStart)renderMyGrid();
+  renderOverlapGrid();
+}
+
+function applyZoomClass(){
+  const z=STATE.gridZoom;
+  ['my-grid-wrap','overlap-grid-wrap'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.classList.remove('zoom-compact','zoom-normal','zoom-expanded');
+    if(z===0)el.classList.add('zoom-compact');
+    else if(z===2)el.classList.add('zoom-expanded');
+    // flash feedback
+    el.classList.add('zoom-flash');
+    setTimeout(()=>el.classList.remove('zoom-flash'),250);
+  });
+}
+
+function updateZoomButtons(){
+  const z=STATE.gridZoom;
+  [0,1,2].forEach(i=>{
+    ['avail','overlap'].forEach(prefix=>{
+      const btn=document.getElementById(`${prefix}-zoom-${i}`);
+      if(btn)btn.classList.toggle('active',z===i);
+    });
+  });
+}
+
+// Pinch-zoom gesture handler — attach to a grid scroll container
+function attachPinchZoom(el){
+  if(!el||el._pinchAttached)return;
+  el._pinchAttached=true;
+  let _initDist=null;
+  el.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      _initDist=Math.hypot(dx,dy);
+    }
+  },{passive:true});
+  el.addEventListener('touchmove',e=>{
+    if(e.touches.length!==2||_initDist===null)return;
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const dist=Math.hypot(dx,dy);
+    const ratio=dist/_initDist;
+    if(ratio>1.3){
+      // pinch-out → zoom in (expand)
+      _initDist=dist;
+      const newZ=Math.min(2,STATE.gridZoom+1);
+      if(newZ!==STATE.gridZoom){setGridZoom(newZ);if(navigator.vibrate)navigator.vibrate(12);}
+    } else if(ratio<0.75){
+      // pinch-in → zoom out (compact)
+      _initDist=dist;
+      const newZ=Math.max(0,STATE.gridZoom-1);
+      if(newZ!==STATE.gridZoom){setGridZoom(newZ);if(navigator.vibrate)navigator.vibrate(12);}
+    }
+  },{passive:true});
+  el.addEventListener('touchend',()=>{_initDist=null;},{passive:true});
+}
+
+// Compact grid renderer — My Availability
+function renderCompactMyGrid(dates,today,nowH,headerEl,grid){
+  const nightCollapsed=localStorage.getItem('ss_night_collapsed')==='1';
+  // Header
+  headerEl.innerHTML='';
+  const corner=document.createElement('div');corner.className='gh';corner.style.background='var(--bg)';headerEl.appendChild(corner);
+  const days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  dates.forEach(date=>{
+    const isToday=toDateStr(date)===today;
+    const isPastDay=toDateStr(date)<today;
+    const h=document.createElement('div');
+    h.className='gh'+(isToday?' today':isPastDay?' past-day':'');
+    h.innerHTML=`<span class="gh-day">${days[date.getDay()]}</span><span class="gh-date">${date.getMonth()+1}/${date.getDate()}</span>`;
+    headerEl.appendChild(h);
+  });
+  // Rows — one per day-part
+  grid.innerHTML='';
+  DAY_PARTS.forEach(part=>{
+    if(part.label==='Night'&&nightCollapsed)return;
+    // Time label cell
+    const tEl=document.createElement('div');
+    tEl.className='gt';
+    tEl.innerHTML=`${part.emoji}\n${part.label}`;
+    tEl.style.fontSize='8px';tEl.style.lineHeight='1.4';tEl.style.height='56px';tEl.style.whiteSpace='pre-line';
+    grid.appendChild(tEl);
+    dates.forEach(date=>{
+      const dk=toDateStr(date);
+      const isPast=dk<today;
+      const filledHours=part.hours.filter(h=>STATE.mySchedule[schedKey(dk,h)]).length;
+      const totalHours=part.hours.length;
+      const fillPct=filledHours/totalHours;
+      const cell=document.createElement('div');
+      let cls='gc'+(filledHours>0?' avail':'')+(isPast?' past':'');
+      cell.className=cls;
+      cell.style.height='56px';
+      cell.style.flexDirection='column';
+      cell.style.gap='3px';
+      cell.style.cursor=isPast?'not-allowed':'pointer';
+      // Day-part label
+      const labelEl=document.createElement('div');
+      labelEl.className='gc-daypart-label';
+      labelEl.textContent=filledHours>0?`${filledHours}/${totalHours}h`:'';
+      cell.appendChild(labelEl);
+      // Fill bar
+      const barWrap=document.createElement('div');barWrap.className='gc-fill-bar';
+      const barInner=document.createElement('div');barInner.className='gc-fill-inner';
+      barInner.style.width=`${Math.round(fillPct*100)}%`;
+      barInner.style.background=filledHours>0?'rgba(139,92,246,0.7)':'transparent';
+      barWrap.appendChild(barInner);cell.appendChild(barWrap);
+      if(!isPast){
+        cell.addEventListener('click',()=>{
+          // Toggle: if any hour in this part is set, clear all; else set all
+          const anySet=part.hours.some(h=>STATE.mySchedule[schedKey(dk,h)]);
+          part.hours.forEach(h=>{
+            const k=schedKey(dk,h);
+            if(anySet)delete STATE.mySchedule[k];
+            else STATE.mySchedule[k]=true;
+          });
+          debounceSave();
+          renderMyGrid();
+          clearTimeout(window._overlapTimer);
+          window._overlapTimer=setTimeout(()=>{renderOverlapGrid();renderBestTimes();},400);
+        });
+        // Touch — same as click for compact
+        cell.addEventListener('touchend',e=>{e.preventDefault();cell.click();},{passive:false});
+      }
+      grid.appendChild(cell);
+    });
+  });
+}
+
+// Compact grid renderer — Overlap
+function renderCompactOverlapGrid(dates,today,counts,headerEl,grid){
+  headerEl.innerHTML='';
+  const corner=document.createElement('div');corner.className='gh';corner.style.background='var(--bg)';headerEl.appendChild(corner);
+  const days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const total=STATE.group.members.length;
+  dates.forEach(date=>{
+    const isToday=toDateStr(date)===today;
+    const h=document.createElement('div');
+    h.className='gh'+(isToday?' today':'');
+    h.innerHTML=`<span class="gh-day">${days[date.getDay()]}</span><span class="gh-date">${date.getMonth()+1}/${date.getDate()}</span>`;
+    headerEl.appendChild(h);
+  });
+  grid.innerHTML='';
+  const nightCollapsed=localStorage.getItem('ss_night_collapsed')==='1';
+  DAY_PARTS.forEach(part=>{
+    if(part.label==='Night'&&nightCollapsed)return;
+    const tEl=document.createElement('div');
+    tEl.className='gt';
+    tEl.innerHTML=`${part.emoji}\n${part.label}`;
+    tEl.style.fontSize='8px';tEl.style.lineHeight='1.4';tEl.style.height='56px';tEl.style.whiteSpace='pre-line';
+    grid.appendChild(tEl);
+    dates.forEach(date=>{
+      const dk=toDateStr(date);
+      // Sum overlap: max member count across hours in this part
+      const partCounts=part.hours.map(h=>(counts[schedKey(dk,h)]||[]).length);
+      const maxN=Math.max(...partCounts,0);
+      // Best hour in this part (highest overlap)
+      const bestHourIdx=partCounts.indexOf(maxN);
+      const bestH=part.hours[bestHourIdx>=0?bestHourIdx:0];
+      const bestKey=schedKey(dk,bestH);
+      const bestMembers=counts[bestKey]||[];
+      const pctN=total>0?maxN/total:0;
+      let ov='';
+      if(maxN>0){
+        if(total<=2)ov=maxN>=total?'ov4':'ov1';
+        else if(total<=4){
+          if(maxN>=total)ov='ov4';
+          else if(maxN>=Math.ceil(total/2))ov='ov3';
+          else ov='ov1';
+        } else {
+          if(pctN>=0.75)ov='ov4';else if(pctN>=0.25)ov='ov3';else ov='ov1';
+        }
+      }
+      // Check if any hour in this part has votes
+      const hasVotes=part.hours.some(h=>(STATE.votes[schedKey(dk,h)]||[]).length>0);
+      const cell=document.createElement('div');
+      cell.className='gc'+(ov?' '+ov:'')+(hasVotes?' voted':'');
+      cell.style.height='56px';cell.style.flexDirection='column';cell.style.gap='2px';
+      // Count label
+      const countEl=document.createElement('div');
+      countEl.className='gc-count-lbl';
+      countEl.textContent=maxN>0?`${maxN}/${total}`:'';
+      countEl.style.fontFamily='var(--font-display)';
+      countEl.style.fontSize='13px';
+      countEl.style.color=ov?'inherit':'var(--text3)';
+      countEl.style.pointerEvents='none';
+      cell.appendChild(countEl);
+      // Fill bar showing overlap fraction
+      if(maxN>0){
+        const barWrap=document.createElement('div');barWrap.className='gc-fill-bar';
+        const barInner=document.createElement('div');barInner.className='gc-fill-inner';
+        const barColor=ov==='ov4'?'rgba(16,185,129,0.8)':ov==='ov3'?'rgba(249,115,22,0.8)':'rgba(234,179,8,0.8)';
+        barInner.style.width=`${Math.round(pctN*100)}%`;
+        barInner.style.background=barColor;
+        barWrap.appendChild(barInner);cell.appendChild(barWrap);
+        cell.style.cursor='pointer';
+        // Touch: open bottom sheet for the best hour
+        let _tsY=0,_tsX=0,_tmov=false;
+        cell.addEventListener('touchstart',e=>{_tsY=e.touches[0].clientY;_tsX=e.touches[0].clientX;_tmov=false;},{passive:true});
+        cell.addEventListener('touchmove',e=>{if(Math.abs(e.touches[0].clientY-_tsY)>8||Math.abs(e.touches[0].clientX-_tsX)>8)_tmov=true;},{passive:true});
+        cell.addEventListener('touchend',e=>{if(_tmov)return;e.preventDefault();openCellSheet(bestKey,bestMembers,bestH);},{passive:false});
+        cell.addEventListener('click',()=>{if(window.matchMedia('(hover:hover)').matches)toggleVote(bestKey);});
+      }
+      grid.appendChild(cell);
+    });
+  });
 }
 
 function debounceSave(){
@@ -3107,9 +3420,23 @@ function renderOverlapGrid(){
   const counts=computeOverlapForWeek(ws);
   const today=toDateStr(new Date());
 
+  // Apply zoom class and buttons
+  applyZoomClass();
+  updateZoomButtons();
+
+  // Attach pinch-zoom
+  const overlapWrap=document.getElementById('overlap-grid-wrap');
+  if(overlapWrap)attachPinchZoom(overlapWrap);
+
   // Update nav label
   const lbl=document.getElementById('ov-week-label');
   if(lbl)lbl.textContent=formatWeekRange(ws);
+
+  // Compact mode — day-part blocks
+  if(STATE.gridZoom===0){
+    renderCompactOverlapGrid(dates,today,counts,headerEl,grid);
+    return;
+  }
 
   // ── Sticky header ───────────────────────────────────
   if(headerEl){
@@ -4175,9 +4502,20 @@ window.switchTab=function(id,scrollTo){
 };
 
 function updateTabBadges(){
-  // Overlap badge
+  // Overlap badge — count future slots only (exclude past hours of today)
   const counts=typeof computeAllOverlap==='function'?computeAllOverlap():{};
-  const overlapSlots=Object.values(counts).filter(ids=>ids&&ids.length>1).length;
+  const nowHour=new Date().getHours();
+  const todayStr=toDateStr(new Date());
+  const overlapSlots=Object.entries(counts).filter(([key,ids])=>{
+    if(!ids||ids.length<=1)return false;
+    // Exclude slots that are in the past (past hours of today)
+    const parts=key.split('-');
+    if(parts.length<4)return true;
+    const ds=parts.slice(0,3).join('-');
+    const h=parseInt(parts[3]);
+    if(ds===todayStr&&h<=nowHour)return false;
+    return true;
+  }).length;
   const overlapBtn=document.querySelector('[data-tab="overlap"]');
   if(overlapBtn){
     const existing=overlapBtn.querySelector('.tab-badge');
